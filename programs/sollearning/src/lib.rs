@@ -1,13 +1,11 @@
 use anchor_lang::prelude::*;
-
 mod constants;
 mod error;
-pub mod instructions;  // <- tem que ser `pub mod` para expor para o programa
+pub mod instructions;
 mod state;
+use instructions::*;
 
-use instructions::*;   // <- importa tudo do mod.rs das instruções
-
-declare_id!("EcD2x6hFcGCwuLrpR5mxjQSSTNcELDdy3hi2xNVb8ni");
+declare_id!("6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm");
 
 #[program]
 pub mod sollearning {

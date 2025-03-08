@@ -14,4 +14,5 @@ spl-associated-token-account = { version = "2.0", features = ["no-entrypoint"] }
 solana-program = "1.17.0"
 
 [features]
+default = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
