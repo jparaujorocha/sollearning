@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token};
 use anchor_spl::associated_token::AssociatedToken;
-use crate::state::ProgramState;
+use crate::state::{ProgramState, TokensMinted};
 use crate::constants::*;
 
 #[derive(Accounts)]
@@ -17,7 +17,8 @@ pub struct InitializeAccounts<'info> {
         space = 8 + std::mem::size_of::<ProgramState>(),
     )]
     pub program_state: Account<'info, ProgramState>,
-    /// CHECK: Usado apenas como referência para derivar o PDA da conta do educador
+    
+    /// CHECK: Used only as a reference for deriving the PDA
     #[account(
         init,
         payer = authority,
@@ -27,7 +28,7 @@ pub struct InitializeAccounts<'info> {
     )]
     pub token_mint: Account<'info, Mint>,
 
-    /// CHECK: Esta conta será inicializada corretamente durante a execução da instrução
+    /// CHECK: This account will be properly initialized during instruction execution
     #[account(mut)]
     pub authority_token_account: UncheckedAccount<'info>,
 
@@ -38,21 +39,22 @@ pub struct InitializeAccounts<'info> {
 }
 
 pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
-    // Obtém o bump manualmente
+    // Get bump value
     let (_, bump) = Pubkey::find_program_address(&[PROGRAM_STATE_SEED], ctx.program_id);
     
-    // Primeiro, preencha todos os dados do estado do programa
+    // Fill program state data
     {
         let program_state = &mut ctx.accounts.program_state;
         program_state.token_mint = ctx.accounts.token_mint.key();
         program_state.authority = ctx.accounts.authority.key();
         program_state.total_minted = 0;
         program_state.total_burned = 0;
+        program_state.educator_count = 0;
         program_state.paused = false;
         program_state.bump = bump;
-    } // O borrow mutável termina aqui
+    } // Mutable borrow ends here
     
-    // Cria a conta de token associada para o authority
+    // Create the associated token account for authority
     anchor_spl::associated_token::create(
         CpiContext::new(
             ctx.accounts.associated_token_program.to_account_info(),
@@ -67,8 +69,7 @@ pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
         ),
     )?;
 
-    // Minta o supply inicial para a conta do authority
-    let program_state_key = ctx.accounts.program_state.key();
+    // Mint initial supply to authority
     let signer_seeds = &[
         PROGRAM_STATE_SEED,
         &[bump],
@@ -88,12 +89,22 @@ pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
         INITIAL_SUPPLY,
     )?;
 
-    // Atualiza o total mintado no estado do programa
-    // Novo borrow mutável depois de todas as operações que precisavam do imutável
+    // Update total minted in program state
     {
         let program_state = &mut ctx.accounts.program_state;
         program_state.total_minted = INITIAL_SUPPLY;
     }
+    
+    // Get current timestamp for event
+    let current_time = Clock::get()?.unix_timestamp;
+    
+    // Emit token minting event
+    emit!(TokensMinted {
+        recipient: ctx.accounts.authority.key(),
+        amount: INITIAL_SUPPLY,
+        minted_by: ctx.accounts.authority.key(),
+        timestamp: current_time,
+    });
 
     msg!(
         "{} token initialized with {} tokens",

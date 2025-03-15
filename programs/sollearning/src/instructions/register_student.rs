@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{ProgramState, StudentInfo};
+use crate::state::{ProgramState, StudentInfo, StudentRegistered};
 use crate::constants::*;
 use crate::error::SolLearningError;
 
@@ -31,15 +31,29 @@ pub struct RegisterStudent<'info> {
 }
 
 pub fn register_student_handler(ctx: Context<RegisterStudent>) -> Result<()> {
+    let current_time = Clock::get()?.unix_timestamp;
+    
+    // Encontre o bump manualmente
+    let (_, bump) = Pubkey::find_program_address(
+        &[STUDENT_SEED, ctx.accounts.student.key().as_ref()],
+        ctx.program_id
+    );
+    
     let student_info = &mut ctx.accounts.student_info;
     student_info.student_address = ctx.accounts.student.key();
     student_info.total_earned = 0;
     student_info.courses_completed = 0;
-    student_info.last_activity = Clock::get()?.unix_timestamp;
-    student_info.bump = ctx.bumps.student_info;
+    student_info.last_activity = current_time;
+    student_info.bump = bump;
+
+    // Emit event for registration
+    emit!(StudentRegistered {
+        student: ctx.accounts.student.key(),
+        timestamp: current_time,
+    });
 
     msg!(
-        "Registered student {}",
+        "Registered student {} (first-time registration)",
         ctx.accounts.student.key()
     );
 

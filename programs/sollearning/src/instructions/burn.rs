@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token};
-use crate::state::ProgramState;
+use crate::state::{ProgramState, TokensBurned};
 use crate::error::SolLearningError;
 use crate::constants::*;
 
@@ -15,16 +15,14 @@ pub struct BurnInstruction<'info> {
         constraint = token::accessor::mint(&token_account)? == token_mint.key() @ SolLearningError::InvalidMint,
         constraint = token::accessor::authority(&token_account)? == owner.key() @ SolLearningError::Unauthorized,
     )]
-    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida 
+    /// CHECK: We verify through constraints that this is a valid token account 
     pub token_account: AccountInfo<'info>,
 
-    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida 
+    /// CHECK: We verify through constraints that this is a valid token account
     #[account(
         mut,
         address = program_state.token_mint,
     )]
-
-    /// CHECK: Verificamos através do constraint address que esta é a conta de mint correta
     pub token_mint: AccountInfo<'info>,
 
     #[account(
@@ -32,6 +30,8 @@ pub struct BurnInstruction<'info> {
         seeds = [PROGRAM_STATE_SEED],
         bump = program_state.bump,
         constraint = !program_state.paused @ SolLearningError::ProgramPaused,
+        // Add constraint to ensure only program authority can burn tokens
+        constraint = (owner.key() == program_state.authority) @ SolLearningError::BurnNotAuthorized,
     )]
     pub program_state: Account<'info, ProgramState>,
 
@@ -39,14 +39,14 @@ pub struct BurnInstruction<'info> {
 }
 
 pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
+    // Validate burn amount
     require!(amount > 0, SolLearningError::InvalidAmount);
 
+    // Get current token balance for improved logging
     let token_balance = token::accessor::amount(&ctx.accounts.token_account)?;
-    require!(
-        token_balance >= amount,
-        SolLearningError::InsufficientBalance
-    );
+    require!(token_balance >= amount, SolLearningError::InsufficientBalance);
 
+    // Execute token burn
     token::burn(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -59,16 +59,33 @@ pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
         amount,
     )?;
 
+    // Update program state to track burned tokens
     let program_state = &mut ctx.accounts.program_state;
     program_state.total_burned = program_state
         .total_burned
         .checked_add(amount)
         .ok_or(SolLearningError::Overflow)?;
 
-    msg!(
-        "Burned {} tokens from {}",
+    // Get current timestamp for event
+    let current_time = Clock::get()?.unix_timestamp;
+
+    // Calculate new balance for improved logging
+    let new_balance = token_balance - amount;
+
+    // Emit token burn event
+    emit!(TokensBurned {
+        burner: ctx.accounts.owner.key(),
         amount,
-        ctx.accounts.owner.key()
+        timestamp: current_time,
+    });
+
+    msg!(
+        "Burned {} tokens from {} by authority - Previous balance: {}, New balance: {}, Total burned: {}",
+        amount,
+        ctx.accounts.owner.key(),
+        token_balance,
+        new_balance,
+        program_state.total_burned
     );
 
     Ok(())

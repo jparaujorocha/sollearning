@@ -17,7 +17,7 @@ pub struct SetEducatorStatus<'info> {
         bump = program_state.bump,
     )]
     pub program_state: Account<'info, ProgramState>,
-    /// CHECK: Usado apenas como referência para derivar o PDA da conta do educador
+    /// CHECK: Used only as a reference to derive the PDA of the educator account
     pub educator: AccountInfo<'info>,
 
     #[account(
@@ -31,14 +31,28 @@ pub struct SetEducatorStatus<'info> {
 pub fn set_educator_status_handler(
     ctx: Context<SetEducatorStatus>,
     is_active: bool,
+    new_mint_limit: Option<u64>,
 ) -> Result<()> {
+    let current_time = Clock::get()?.unix_timestamp;
     let educator_account = &mut ctx.accounts.educator_account;
+    
+    // Update status
     educator_account.is_active = is_active;
+    
+    // Update mint limit if provided
+    if let Some(mint_limit) = new_mint_limit {
+        require!(mint_limit > 0 && mint_limit <= MAX_MINT_AMOUNT, SolLearningError::InvalidAmount);
+        educator_account.mint_limit = mint_limit;
+    }
+    
+    // Update last updated timestamp
+    educator_account.last_updated_at = current_time;
 
     msg!(
-        "Updated educator {} status to {}",
+        "Updated educator {} status to {}{}",
         ctx.accounts.educator.key(),
-        if is_active { "active" } else { "inactive" }
+        if is_active { "active" } else { "inactive" },
+        if new_mint_limit.is_some() { format!(", new mint limit: {}", new_mint_limit.unwrap()) } else { String::from("") }
     );
 
     Ok(())

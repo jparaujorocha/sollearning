@@ -16,15 +16,17 @@ pub struct CreateStudentTokenAccount<'info> {
         constraint = !program_state.paused @ SolLearningError::ProgramPaused,
     )]
     pub program_state: Account<'info, ProgramState>,
-    /// CHECK: Usado como autoridade para a nova conta de token
+    
+    /// CHECK: Used as authority for the new token account
     #[account(
         address = program_state.token_mint,
     )]
     pub token_mint: AccountInfo<'info>,
     
-    /// CHECK: Verificamos que este mint corresponde ao configurado no estado do programa
+    /// CHECK: This is the student who will be the owner of the token account
     pub student: UncheckedAccount<'info>,
-    /// CHECK: Verificamos que este mint corresponde ao configurado no estado do programa
+    
+    /// CHECK: This is the token account that will be created
     #[account(mut)]
     pub student_token_account: UncheckedAccount<'info>,
     
@@ -35,6 +37,7 @@ pub struct CreateStudentTokenAccount<'info> {
 }
 
 pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccount>) -> Result<()> {
+    // Create the associated token account
     anchor_spl::associated_token::create(
         CpiContext::new(
             ctx.accounts.associated_token_program.to_account_info(),

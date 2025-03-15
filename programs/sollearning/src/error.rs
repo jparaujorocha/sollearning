@@ -2,45 +2,78 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum SolLearningError {
-    #[msg("Acesso não autorizado")]
+    #[msg("Unauthorized access")]
     Unauthorized,
     
-    #[msg("Quantidade de tokens inválida")]
+    #[msg("Invalid token amount")]
     InvalidAmount,
     
-    #[msg("Saldo insuficiente de tokens")]
+    #[msg("Insufficient token balance")]
     InsufficientBalance,
     
-    #[msg("Token mint inválido")]
+    #[msg("Invalid token mint")]
     InvalidMint,
     
-    #[msg("Overflow na operação aritmética")]
+    #[msg("Arithmetic operation overflow")]
     Overflow,
     
-    #[msg("A conta de tokens já foi inicializada")]
+    #[msg("Token account already initialized")]
     AlreadyInitialized,
     
-    #[msg("Autoridade inválida")]
+    #[msg("Invalid authority")]
     InvalidAuthority,
     
-    #[msg("Conta de educador inválida")]
+    #[msg("Invalid educator account")]
     InvalidEducator,
     
-    #[msg("Conta de estudante inválida")]
+    #[msg("Invalid student account")]
     InvalidStudent,
     
-    #[msg("O curso já foi concluído pelo estudante")]
+    #[msg("Course already completed by student")]
     CourseAlreadyCompleted,
     
-    #[msg("ID do curso inválido")]
+    #[msg("Invalid course ID")]
     InvalidCourseId,
     
-    #[msg("Educador inativo")]
+    #[msg("Inactive educator")]
     InactiveEducator,
     
-    #[msg("A conta já está registrada")]
+    #[msg("Account already registered")]
     AlreadyRegistered,
     
-    #[msg("O programa está pausado")]
+    #[msg("Program is paused")]
     ProgramPaused,
+
+    #[msg("Course name too long")]
+    CourseNameTooLong,
+
+    #[msg("Course ID too long")]
+    CourseIdTooLong,
+
+    #[msg("Maximum educators limit reached")]
+    MaxEducatorsLimitReached,
+
+    #[msg("Maximum courses per educator limit reached")]
+    MaxCoursesPerEducatorReached,
+
+    #[msg("Course does not exist")]
+    CourseDoesNotExist,
+
+    #[msg("Course is inactive")]
+    CourseInactive,
+
+    #[msg("Course does not belong to educator")]
+    CourseNotOwnedByEducator,
+
+    #[msg("Invalid course reward amount")]
+    InvalidCourseReward,
+    
+    #[msg("Only authority can burn tokens")]
+    BurnNotAuthorized,
+    
+    #[msg("Minting tokens too frequently - please wait for cooldown period")]
+    MintingTooFrequent,
+    
+    #[msg("Insufficient balance for transfer - transaction may be front-running")]
+    TransferFrontRunning,
 }

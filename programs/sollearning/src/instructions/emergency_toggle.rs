@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::ProgramState;
+use crate::state::{ProgramState, ProgramStatusChanged};
 use crate::error::SolLearningError;
 use crate::constants::*;
 
@@ -24,7 +24,19 @@ pub fn emergency_toggle_handler(
     paused: bool,
 ) -> Result<()> {
     let program_state = &mut ctx.accounts.program_state;
+    
+    // Update program paused status
     program_state.paused = paused;
+    
+    // Get current timestamp for event
+    let current_time = Clock::get()?.unix_timestamp;
+    
+    // Emit event for program status change
+    emit!(ProgramStatusChanged {
+        paused,
+        authority: ctx.accounts.authority.key(),
+        timestamp: current_time,
+    });
 
     msg!(
         "Program {} by authority {}",
