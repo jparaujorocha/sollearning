@@ -2,11 +2,8 @@
 seeds = false
 skip-lint = false
 
-[programs.devnet]
-sollearning = "6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm"
-
 [programs.localnet]
-sollearning = "6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm"
+sollearning = "FpfRZaGL4sHYABnUxrr7U8956kH491RQTrHTwe9gGUAU"
 
 [registry]
 url = "https://api.apr.dev"

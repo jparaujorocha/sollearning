@@ -15,14 +15,17 @@ pub struct TransferInstruction<'info> {
         constraint = token::accessor::mint(&from)? == token_mint.key() @ SolLearningError::InvalidMint,
         constraint = token::accessor::authority(&from)? == sender.key() @ SolLearningError::Unauthorized,
     )]
+    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida para o remetente
     pub from: AccountInfo<'info>,
 
     #[account(
         mut,
         constraint = token::accessor::mint(&to)? == token_mint.key() @ SolLearningError::InvalidMint,
     )]
+    /// CHECK: Verificamos que esta é uma conta de token válida com o mint correto
     pub to: AccountInfo<'info>,
 
+    /// CHECK: Verificamos que esta é uma conta de token válida com o mint correto
     #[account(address = program_state.token_mint)]
     pub token_mint: AccountInfo<'info>,
 

@@ -16,14 +16,15 @@ pub struct CreateStudentTokenAccount<'info> {
         constraint = !program_state.paused @ SolLearningError::ProgramPaused,
     )]
     pub program_state: Account<'info, ProgramState>,
-    
+    /// CHECK: Usado como autoridade para a nova conta de token
     #[account(
         address = program_state.token_mint,
     )]
     pub token_mint: AccountInfo<'info>,
     
+    /// CHECK: Verificamos que este mint corresponde ao configurado no estado do programa
     pub student: UncheckedAccount<'info>,
-    
+    /// CHECK: Verificamos que este mint corresponde ao configurado no estado do programa
     #[account(mut)]
     pub student_token_account: UncheckedAccount<'info>,
     

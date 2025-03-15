@@ -5,7 +5,16 @@ pub mod error;
 pub mod state;
 pub mod instructions;
 
-use instructions::*;
+// Importações explícitas dos módulos __client_accounts_* que o Anchor gera
+use instructions::initialize::{ initialize_handler, InitializeAccounts, __client_accounts_initialize_accounts };
+use instructions::register_educator::{ register_educator_handler, RegisterEducator, __client_accounts_register_educator };
+use instructions::set_educator_status::{ set_educator_status_handler, SetEducatorStatus, __client_accounts_set_educator_status };
+use instructions::register_student::{ register_student_handler, RegisterStudent, __client_accounts_register_student };
+use instructions::create_student_account::{ create_student_token_account_handler, CreateStudentTokenAccount, __client_accounts_create_student_token_account };
+use instructions::mint::{ mint_to_student_handler, MintToStudent, __client_accounts_mint_to_student };
+use instructions::transfer::{ transfer_handler, TransferInstruction, __client_accounts_transfer_instruction };
+use instructions::burn::{ burn_handler, BurnInstruction, __client_accounts_burn_instruction };
+use instructions::emergency_toggle::{ emergency_toggle_handler, EmergencyToggle, __client_accounts_emergency_toggle };
 
 declare_id!("6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm");
 

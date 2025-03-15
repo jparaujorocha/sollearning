@@ -17,7 +17,7 @@ pub struct SetEducatorStatus<'info> {
         bump = program_state.bump,
     )]
     pub program_state: Account<'info, ProgramState>,
-
+    /// CHECK: Usado apenas como referência para derivar o PDA da conta do educador
     pub educator: AccountInfo<'info>,
 
     #[account(

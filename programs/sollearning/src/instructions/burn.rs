@@ -15,12 +15,16 @@ pub struct BurnInstruction<'info> {
         constraint = token::accessor::mint(&token_account)? == token_mint.key() @ SolLearningError::InvalidMint,
         constraint = token::accessor::authority(&token_account)? == owner.key() @ SolLearningError::Unauthorized,
     )]
+    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida 
     pub token_account: AccountInfo<'info>,
 
+    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida 
     #[account(
         mut,
         address = program_state.token_mint,
     )]
+
+    /// CHECK: Verificamos através do constraint address que esta é a conta de mint correta
     pub token_mint: AccountInfo<'info>,
 
     #[account(

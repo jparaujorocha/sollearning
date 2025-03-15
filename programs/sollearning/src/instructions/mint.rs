@@ -31,6 +31,7 @@ pub struct MintToStudent<'info> {
         mut,
         address = program_state.token_mint,
     )]
+    /// CHECK: Verificamos que este mint corresponde ao configurado no estado do programa
     pub token_mint: AccountInfo<'info>,
     
     #[account(
@@ -39,7 +40,7 @@ pub struct MintToStudent<'info> {
         bump = student_info.bump,
     )]
     pub student_info: Account<'info, StudentInfo>,
-    
+    /// CHECK: Usado apenas como referência para derivar o PDA do student_info
     pub student: AccountInfo<'info>,
     
     #[account(
@@ -47,6 +48,7 @@ pub struct MintToStudent<'info> {
         constraint = token::accessor::mint(&student_token_account)? == program_state.token_mint @ SolLearningError::InvalidMint,
         constraint = token::accessor::authority(&student_token_account)? == student.key() @ SolLearningError::Unauthorized,
     )]
+    /// CHECK: Verificamos através de constraints que esta é uma conta de token válida para o estudante
     pub student_token_account: AccountInfo<'info>,
     
     #[account(

@@ -1,3 +1,4 @@
+// instructions/mod.rs
 pub mod initialize;
 pub mod mint;
 pub mod transfer;
@@ -8,6 +9,7 @@ pub mod register_student;
 pub mod create_student_account;
 pub mod emergency_toggle;
 
+// Re-export instruction contexts
 pub use initialize::InitializeAccounts;
 pub use mint::MintToStudent;
 pub use transfer::TransferInstruction;
@@ -18,6 +20,7 @@ pub use register_student::RegisterStudent;
 pub use create_student_account::CreateStudentTokenAccount;
 pub use emergency_toggle::EmergencyToggle;
 
+// Re-export handler functions
 pub use initialize::initialize_handler;
 pub use mint::mint_to_student_handler;
 pub use transfer::transfer_handler;
