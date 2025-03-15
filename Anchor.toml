@@ -5,6 +5,9 @@ skip-lint = false
 [programs.devnet]
 sollearning = "6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm"
 
+[programs.localnet]
+sollearning = "6F7BtsWEyMSf3RxKxxCxyJEdWJDMiuBsMMpMEWvbJGtm"
+
 [registry]
 url = "https://api.apr.dev"
 

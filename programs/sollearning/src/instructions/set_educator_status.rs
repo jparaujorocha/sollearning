@@ -4,8 +4,7 @@ use crate::constants::*;
 use crate::error::SolLearningError;
 
 #[derive(Accounts)]
-#[instruction(mint_limit: u64)]
-pub struct RegisterEducator<'info> {
+pub struct SetEducatorStatus<'info> {
     #[account(
         mut,
         constraint = authority.key() == program_state.authority @ SolLearningError::Unauthorized,
@@ -22,35 +21,24 @@ pub struct RegisterEducator<'info> {
     pub educator: AccountInfo<'info>,
 
     #[account(
-        init,
-        payer = authority,
-        space = 8 + std::mem::size_of::<EducatorAccount>(),
+        mut,
         seeds = [EDUCATOR_SEED, educator.key().as_ref()],
-        bump,
+        bump = educator_account.bump,
     )]
     pub educator_account: Account<'info, EducatorAccount>,
-
-    pub system_program: Program<'info, System>,
 }
 
-pub fn register_educator_handler(
-    ctx: Context<RegisterEducator>,
-    mint_limit: u64,
+pub fn set_educator_status_handler(
+    ctx: Context<SetEducatorStatus>,
+    is_active: bool,
 ) -> Result<()> {
-    require!(mint_limit > 0 && mint_limit <= MAX_MINT_AMOUNT, SolLearningError::InvalidAmount);
-
     let educator_account = &mut ctx.accounts.educator_account;
-    educator_account.educator_address = ctx.accounts.educator.key();
-    educator_account.authority = ctx.accounts.authority.key();
-    educator_account.mint_limit = mint_limit;
-    educator_account.total_minted = 0;
-    educator_account.is_active = true;
-    educator_account.bump = ctx.bumps.educator_account;
+    educator_account.is_active = is_active;
 
     msg!(
-        "Registered educator {} with mint limit of {}",
+        "Updated educator {} status to {}",
         ctx.accounts.educator.key(),
-        mint_limit
+        if is_active { "active" } else { "inactive" }
     );
 
     Ok(())

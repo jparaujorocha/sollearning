@@ -1,12 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::{Mint, Token, TokenAccount},
-    associated_token::AssociatedToken,
-};
-use crate::{
-    state::ProgramState,
-    error::SolLearningError,
-};
+use anchor_spl::token::Token;
+use anchor_spl::associated_token::AssociatedToken;
+use crate::state::ProgramState;
+use crate::constants::*;
+use crate::error::SolLearningError; 
 
 #[derive(Accounts)]
 pub struct CreateStudentTokenAccount<'info> {
@@ -14,26 +11,21 @@ pub struct CreateStudentTokenAccount<'info> {
     pub payer: Signer<'info>,
     
     #[account(
-        seeds = [b"program-state".as_ref()],
-        bump,
+        seeds = [PROGRAM_STATE_SEED],
+        bump = program_state.bump,
+        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
     )]
     pub program_state: Account<'info, ProgramState>,
     
     #[account(
-        address = program_state.token_mint @ SolLearningError::InvalidMint,
+        address = program_state.token_mint,
     )]
-    pub token_mint: Account<'info, Mint>,
+    pub token_mint: AccountInfo<'info>,
     
-    /// CHECK: This is the student for whom we're creating a token account
-    pub student: AccountInfo<'info>,
+    pub student: UncheckedAccount<'info>,
     
-    #[account(
-        init,
-        payer = payer,
-        associated_token::mint = token_mint,
-        associated_token::authority = student,
-    )]
-    pub student_token_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub student_token_account: UncheckedAccount<'info>,
     
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -42,10 +34,29 @@ pub struct CreateStudentTokenAccount<'info> {
 }
 
 pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccount>) -> Result<()> {
+    anchor_spl::associated_token::create(
+        CpiContext::new(
+            ctx.accounts.associated_token_program.to_account_info(),
+            anchor_spl::associated_token::Create {
+                payer: ctx.accounts.payer.to_account_info(),
+                associated_token: ctx.accounts.student_token_account.to_account_info(),
+                authority: ctx.accounts.student.to_account_info(),
+                mint: ctx.accounts.token_mint.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                token_program: ctx.accounts.token_program.to_account_info(),
+            },
+        ),
+    )?;
+
     msg!(
         "Created token account for student: {}",
         ctx.accounts.student.key()
     );
-    
+
+    msg!(
+        "Token account address: {}",
+        ctx.accounts.student_token_account.key()
+    );
+
     Ok(())
 }

@@ -1,33 +1,33 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount, Burn};
-use crate::{
-    state::ProgramState,
-    error::SolLearningError,
-};
+use anchor_spl::token::{self, Token};
+use crate::state::ProgramState;
+use crate::error::SolLearningError;
+use crate::constants::*;
 
 #[derive(Accounts)]
 #[instruction(amount: u64)]
-pub struct BurnInstruction<'info> {  // <- Renomeado para não colidir com anchor_spl::Burn
+pub struct BurnInstruction<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(
         mut,
-        constraint = token_account.owner == owner.key() @ SolLearningError::Unauthorized,
-        constraint = token_account.mint == token_mint.key() @ SolLearningError::InvalidMint,
+        constraint = token::accessor::mint(&token_account)? == token_mint.key() @ SolLearningError::InvalidMint,
+        constraint = token::accessor::authority(&token_account)? == owner.key() @ SolLearningError::Unauthorized,
     )]
-    pub token_account: Account<'info, TokenAccount>,
+    pub token_account: AccountInfo<'info>,
 
     #[account(
         mut,
-        address = program_state.token_mint @ SolLearningError::InvalidMint,
+        address = program_state.token_mint,
     )]
-    pub token_mint: Account<'info, Mint>,
+    pub token_mint: AccountInfo<'info>,
 
     #[account(
         mut,
-        seeds = [b"program-state".as_ref()],
-        bump,
+        seeds = [PROGRAM_STATE_SEED],
+        bump = program_state.bump,
+        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
     )]
     pub program_state: Account<'info, ProgramState>,
 
@@ -36,12 +36,17 @@ pub struct BurnInstruction<'info> {  // <- Renomeado para não colidir com ancho
 
 pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
     require!(amount > 0, SolLearningError::InvalidAmount);
-    require!(ctx.accounts.token_account.amount >= amount, SolLearningError::InsufficientBalance);
 
-    anchor_spl::token::burn(
+    let token_balance = token::accessor::amount(&ctx.accounts.token_account)?;
+    require!(
+        token_balance >= amount,
+        SolLearningError::InsufficientBalance
+    );
+
+    token::burn(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            Burn {
+            token::Burn {
                 mint: ctx.accounts.token_mint.to_account_info(),
                 from: ctx.accounts.token_account.to_account_info(),
                 authority: ctx.accounts.owner.to_account_info(),
@@ -59,7 +64,7 @@ pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
     msg!(
         "Burned {} tokens from {}",
         amount,
-        ctx.accounts.token_account.key()
+        ctx.accounts.owner.key()
     );
 
     Ok(())

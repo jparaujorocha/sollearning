@@ -2,30 +2,45 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum SolLearningError {
-    #[msg("Unauthorized access")]
+    #[msg("Acesso não autorizado")]
     Unauthorized,
     
-    #[msg("Invalid token amount")]
+    #[msg("Quantidade de tokens inválida")]
     InvalidAmount,
     
-    #[msg("Insufficient token balance")]
+    #[msg("Saldo insuficiente de tokens")]
     InsufficientBalance,
     
-    #[msg("Invalid token mint")]
+    #[msg("Token mint inválido")]
     InvalidMint,
     
-    #[msg("Arithmetic operation overflow")]
+    #[msg("Overflow na operação aritmética")]
     Overflow,
     
-    #[msg("Token account already initialized")]
+    #[msg("A conta de tokens já foi inicializada")]
     AlreadyInitialized,
     
-    #[msg("Invalid authority")]
+    #[msg("Autoridade inválida")]
     InvalidAuthority,
     
-    #[msg("Invalid educator account")]
+    #[msg("Conta de educador inválida")]
     InvalidEducator,
     
-    #[msg("Invalid student account")]
+    #[msg("Conta de estudante inválida")]
     InvalidStudent,
+    
+    #[msg("O curso já foi concluído pelo estudante")]
+    CourseAlreadyCompleted,
+    
+    #[msg("ID do curso inválido")]
+    InvalidCourseId,
+    
+    #[msg("Educador inativo")]
+    InactiveEducator,
+    
+    #[msg("A conta já está registrada")]
+    AlreadyRegistered,
+    
+    #[msg("O programa está pausado")]
+    ProgramPaused,
 }
