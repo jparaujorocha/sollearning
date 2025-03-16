@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 pub mod constants;
 pub mod error;
-pub mod state;
+pub mod states;
 pub mod instructions;
 
 // Importações explícitas dos módulos __client_accounts_* que o Anchor gera
@@ -60,15 +60,15 @@ pub mod sollearning {
     
     pub fn update_course(
         ctx: Context<UpdateCourse>,
-        course_id: String,
         course_name: Option<String>,
         reward_amount: Option<u64>,
         is_active: Option<bool>,
         metadata_hash: Option<[u8; 32]>,
+        change_description: String,
     ) -> Result<()> {
-        update_course_handler(ctx, course_name, reward_amount, is_active, metadata_hash)
+        update_course_handler(ctx, course_name, reward_amount, is_active, metadata_hash, change_description) 
     }
-
+    
     pub fn mint_to_student(ctx: Context<MintToStudent>, amount: u64, course_id: String) -> Result<()> {
         mint_to_student_handler(ctx, amount, course_id)
     }

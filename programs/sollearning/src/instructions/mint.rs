@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token};
 use anchor_spl::associated_token::AssociatedToken;
-use crate::state::{ProgramState, EducatorAccount, StudentInfo, Course, CourseCompletion, CourseCompleted, TokensMinted};
+use crate::states::program::ProgramState;
+use crate::states::educator::EducatorAccount;
+use crate::states::student::StudentInfo;
+use crate::states::course::{Course, CourseCompletion, CourseCompleted, TokensMinted};
 use crate::error::SolLearningError;
 use crate::constants::*;
 

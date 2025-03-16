@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::associated_token::AssociatedToken;
-use crate::state::ProgramState;
+use crate::states::program::ProgramState;
 use crate::constants::*;
 use crate::error::SolLearningError; 
 

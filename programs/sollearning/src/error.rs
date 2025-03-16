@@ -76,4 +76,49 @@ pub enum SolLearningError {
     
     #[msg("Insufficient balance for transfer - transaction may be front-running")]
     TransferFrontRunning,
+    
+    #[msg("Invalid multisig configuration")]
+    InvalidMultisigConfig,
+    
+    #[msg("Threshold must be greater than 0 and less than or equal to the number of signers")]
+    InvalidThreshold,
+    
+    #[msg("Signer already exists in multisig")]
+    SignerAlreadyExists,
+    
+    #[msg("Signer does not exist in multisig")]
+    SignerDoesNotExist,
+    
+    #[msg("Maximum number of signers reached")]
+    MaxSignersReached,
+    
+    #[msg("Not enough signers to execute proposal")]
+    NotEnoughSigners,
+    
+    #[msg("Proposal already executed")]
+    ProposalAlreadyExecuted,
+    
+    #[msg("Proposal already cancelled")]
+    ProposalAlreadyCancelled,
+    
+    #[msg("Proposal has expired")]
+    ProposalExpired,
+    
+    #[msg("Invalid proposal status")]
+    InvalidProposalStatus,
+    
+    #[msg("Signer has already approved this proposal")]
+    AlreadyApproved,
+    
+    #[msg("Description too long")]
+    DescriptionTooLong,
+    
+    #[msg("Removing this signer would make threshold impossible to reach")]
+    CannotRemoveSigner,
+    
+    #[msg("Cannot remove last signer")]
+    CannotRemoveLastSigner,
+    
+    #[msg("Cannot create course history record")]
+    CannotCreateCourseHistory,
 }

@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token};
 use anchor_spl::associated_token::AssociatedToken;
-use crate::state::{ProgramState, TokensMinted};
+use crate::states::program::ProgramState;
+use crate::states::course::TokensMinted;
 use crate::constants::*;
 
 #[derive(Accounts)]

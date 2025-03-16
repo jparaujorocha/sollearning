@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
-use crate::state::{ProgramState, EducatorAccount, Course, CourseCreated};
+use crate::states::program::ProgramState;
+use crate::states::educator::EducatorAccount;
+use crate::states::course::{Course, CourseCreated};
 use crate::constants::*;
 use crate::error::SolLearningError;
 

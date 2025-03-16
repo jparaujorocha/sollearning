@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use crate::state::{ProgramState, StudentInfo, StudentRegistered};
+use crate::states::program::ProgramState;
+use crate::states::student::{StudentInfo, StudentRegistered};
 use crate::constants::*;
 use crate::error::SolLearningError;
 

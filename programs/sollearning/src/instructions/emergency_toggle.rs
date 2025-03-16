@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{ProgramState, ProgramStatusChanged};
+use crate::states::program::{ProgramState, ProgramStatusChanged};
 use crate::error::SolLearningError;
 use crate::constants::*;
 

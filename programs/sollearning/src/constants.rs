@@ -11,6 +11,9 @@ pub const STUDENT_SEED: &[u8] = b"student";
 pub const ADMIN_SEED: &[u8] = b"admin";
 pub const COURSE_SEED: &[u8] = b"course";
 pub const COURSE_COMPLETION_SEED: &[u8] = b"course-completion";
+pub const MULTISIG_SEED: &[u8] = b"multisig";
+pub const PROPOSAL_SEED: &[u8] = b"proposal";
+pub const COURSE_HISTORY_SEED: &[u8] = b"course-history";
 
 // Various constants for the program
 pub const MAX_MINT_AMOUNT: u64 = 1_000_000_000_000_000; // 1M tokens with 9 decimals
@@ -18,3 +21,7 @@ pub const MAX_COURSE_ID_LENGTH: usize = 50;
 pub const MAX_COURSE_NAME_LENGTH: usize = 100;
 pub const MAX_EDUCATORS_LIMIT: u16 = 1000; // Maximum number of educators allowed
 pub const MAX_COURSES_PER_EDUCATOR: u16 = 100; // Maximum courses per educator
+pub const MAX_SIGNERS: usize = 10; // Maximum number of signers in multisig
+pub const MAX_DESCRIPTION_LENGTH: usize = 200; // Maximum length for proposal descriptions
+pub const MAX_CHANGE_DESCRIPTION_LENGTH: usize = 200; // Maximum length for course change descriptions
+pub const PROPOSAL_EXPIRATION_TIME: i64 = 604800; // 7 days in seconds
