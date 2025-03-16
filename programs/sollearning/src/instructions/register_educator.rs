@@ -11,8 +11,8 @@ pub fn register_educator_handler(ctx: Context<RegisterEducator>, mint_limit: u64
     
     validate_mint_limit(mint_limit)?;
 
-    let bump = ctx.bumps.educator_account;
-    let current_time = Clock::get()?.unix_timestamp;
+    let bump: u8 = ctx.bumps.educator_account;
+    let current_time: i64 = Clock::get()?.unix_timestamp;
 
     _ = { 
         let educator_account: &mut Account<'_, EducatorAccount> = &mut ctx.accounts.educator_account;

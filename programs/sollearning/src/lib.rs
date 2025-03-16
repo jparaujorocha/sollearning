@@ -103,47 +103,47 @@ pub mod sollearning {
         metadata_hash: Option<[u8; 32]>,
         change_description: String,
     ) -> Result<()> {
-        let handler = instructions::update_course::update_course_handler;
+        let handler: fn(Context<'_, '_, '_, '_, UpdateCourse<'_>>, Option<String>, Option<u64>, Option<bool>, Option<[u8; 32]>, String) -> std::result::Result<(), Error> = instructions::update_course::update_course_handler;
         handler(ctx, course_name, reward_amount, is_active, metadata_hash, change_description) 
     }
     
     pub fn mint_to_student(ctx: Context<MintToStudent>, amount: u64, course_id: String) -> Result<()> {
-        let handler = instructions::mint::mint_to_student_handler;
+        let handler: fn(Context<'_, '_, '_, '_, MintToStudent<'_>>, u64, String) -> std::result::Result<(), Error> = instructions::mint::mint_to_student_handler;
         handler(ctx, amount, course_id)
     }
 
     pub fn transfer(ctx: Context<TransferInstruction>, amount: u64) -> Result<()> {
-        let handler = instructions::transfer::transfer_handler;
+        let handler: fn(Context<'_, '_, '_, '_, TransferInstruction<'_>>, u64) -> std::result::Result<(), Error> = instructions::transfer::transfer_handler;
         handler(ctx, amount)
     }
 
     pub fn burn(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
-        let handler = instructions::burn::burn_handler;
+        let handler: fn(Context<'_, '_, '_, '_, BurnInstruction<'_>>, u64) -> std::result::Result<(), Error> = instructions::burn::burn_handler;
         handler(ctx, amount)
     }
 
     pub fn emergency_toggle(ctx: Context<EmergencyToggle>, paused: bool) -> Result<()> {
-        let handler = instructions::emergency_toggle::emergency_toggle_handler;
+        let handler: fn(Context<'_, '_, '_, '_, EmergencyToggle<'_>>, bool) -> std::result::Result<(), Error> = instructions::emergency_toggle::emergency_toggle_handler;
         handler(ctx, paused)
     }
 
     pub fn approve_proposal(ctx: Context<ApproveProposal>) -> Result<()> {
-        let handler = instructions::approve_proposal::approve_proposal_handler;
+        let handler: fn(Context<'_, '_, '_, '_, ApproveProposal<'_>>) -> std::result::Result<(), Error> = instructions::approve_proposal::approve_proposal_handler;
         handler(ctx)
     }
     
     pub fn execute_proposal(ctx: Context<ExecuteProposal>) -> Result<()> {
-        let handler = instructions::execute_proposal::execute_proposal_handler;
+        let handler: fn(Context<'_, '_, '_, '_, ExecuteProposal<'_>>) -> std::result::Result<(), Error> = instructions::execute_proposal::execute_proposal_handler;
         handler(ctx)
     }
 
     pub fn create_proposal(ctx: Context<CreateProposal>, instruction: ProposalInstruction, description: String) -> Result<()> {
-        let handler = instructions::create_proposal::create_proposal_handler;
+        let handler: fn(Context<'_, '_, '_, '_, CreateProposal<'_>>, ProposalInstruction, String) -> std::result::Result<(), Error> = instructions::create_proposal::create_proposal_handler;
         handler(ctx, instruction, description)
     }
 
     pub fn create_multisig(ctx: Context<CreateMultisig>, signers: Vec<Pubkey>, threshold: u8) -> Result<()> {
-        let handler = instructions::create_multisig::create_multisig_handler;
+        let handler: fn(Context<'_, '_, '_, '_, CreateMultisig<'_>>, Vec<Pubkey>, u8) -> std::result::Result<(), Error> = instructions::create_multisig::create_multisig_handler;
         handler(ctx, signers, threshold)
     }
 
@@ -154,7 +154,7 @@ pub mod sollearning {
         max_mint_amount: u64,
         mint_cooldown_period: i64,
     ) -> Result<()> {
-        let handler = instructions::create_program_config::create_program_config_handler;
+        let handler: fn(Context<'_, '_, '_, '_, CreateProgramConfig<'_>>, u16, u16, u64, i64) -> std::result::Result<(), Error> = instructions::create_program_config::create_program_config_handler;
         handler(
             ctx,
             max_educators,
