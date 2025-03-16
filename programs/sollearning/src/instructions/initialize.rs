@@ -1,18 +1,33 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint};
 use crate::states::program::ProgramState;
+use crate::states::config::ProgramConfig;
 use crate::states::course::TokensMinted;
 use crate::constants::*;
 use crate::instructions::structs::initialize_struct::InitializeAccounts;
 
 pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
-    let bump = get_program_bump(ctx.program_id)?;
+    let program_bump = ctx.bumps.program_state;
+    let config_bump = ctx.bumps.program_config;
+    let current_time = Clock::get()?.unix_timestamp;
 
-    initialize_program_state(&mut ctx.accounts.program_state, &ctx.accounts.token_mint, &ctx.accounts.authority, bump)?;
+    initialize_program_state(
+        &mut ctx.accounts.program_state,
+        &ctx.accounts.token_mint,
+        &ctx.accounts.authority,
+        program_bump
+    )?;
+
+    initialize_program_config(
+        &mut ctx.accounts.program_config,
+        &ctx.accounts.authority,
+        current_time,
+        config_bump
+    )?;
 
     create_authority_token_account(&ctx)?;
 
-    mint_initial_supply(&ctx, bump)?;
+    mint_initial_supply(&ctx, program_bump)?;
 
     update_total_minted(&mut ctx.accounts.program_state)?;
 
@@ -21,11 +36,6 @@ pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
     log_initialization(&ctx);
 
     Ok(())
-}
-
-fn get_program_bump(program_id: &Pubkey) -> Result<u8> {
-    let (_, bump) = Pubkey::find_program_address(&[PROGRAM_STATE_SEED], program_id);
-    Ok(bump)
 }
 
 fn initialize_program_state(
@@ -40,7 +50,24 @@ fn initialize_program_state(
     program_state.total_burned = 0;
     program_state.educator_count = 0;
     program_state.paused = false;
+    program_state.pause_flags = 0;
     program_state.bump = bump;
+    Ok(())
+}
+
+fn initialize_program_config(
+    program_config: &mut Account<ProgramConfig>,
+    authority: &Signer,
+    current_time: i64,
+    bump: u8,
+) -> Result<()> {
+    program_config.max_educators = MAX_EDUCATORS_LIMIT;
+    program_config.max_courses_per_educator = MAX_COURSES_PER_EDUCATOR;
+    program_config.max_mint_amount = MAX_MINT_AMOUNT;
+    program_config.mint_cooldown_period = MINT_COOLDOWN_PERIOD;
+    program_config.authority = authority.key();
+    program_config.last_updated_at = current_time;
+    program_config.bump = bump;
     Ok(())
 }
 

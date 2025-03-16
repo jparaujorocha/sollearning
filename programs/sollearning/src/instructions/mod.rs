@@ -15,6 +15,9 @@ pub mod approve_proposal;
 pub mod execute_proposal;
 pub mod create_multisig;
 pub mod create_proposal;
+pub mod create_program_config;
+pub mod update_program_config;
+pub mod create_emergency_multisig;
 
 // Re-export instruction contexts from the structs module
 pub use structs::approve_proposal_struct::ApproveProposal;
@@ -23,7 +26,7 @@ pub use structs::create_course_struct::CreateCourse;
 pub use structs::create_multisig_struct::CreateMultisig;
 pub use structs::create_proposal_struct::CreateProposal;
 pub use structs::create_student_account_struct::CreateStudentTokenAccount;
-pub use structs::emergency_toggle_struct::EmergencyToggle;
+pub use structs::emergency_toggle_struct::{EmergencyToggle, EmergencyToggleGranular, EmergencyMultisigToggle};
 pub use structs::execute_proposal_struct::ExecuteProposal;
 pub use structs::initialize_struct::InitializeAccounts;
 pub use structs::mint_struct::MintToStudent;
@@ -32,6 +35,9 @@ pub use structs::register_student_struct::RegisterStudent;
 pub use structs::set_educator_status_struct::SetEducatorStatus;
 pub use structs::transfer_struct::TransferInstruction;
 pub use structs::update_course_struct::UpdateCourse;
+pub use structs::create_program_config_struct::CreateProgramConfig;
+pub use structs::update_program_config_struct::UpdateProgramConfig;
+pub use structs::create_emergency_multisig_struct::CreateEmergencyMultisig;
 
 // Re-export handler functions
 pub use initialize::initialize_handler;
@@ -45,7 +51,12 @@ pub use create_student_account::create_student_token_account_handler;
 pub use create_course::create_course_handler;
 pub use update_course::update_course_handler;
 pub use emergency_toggle::emergency_toggle_handler;
+pub use emergency_toggle::emergency_toggle_granular_handler;
+pub use emergency_toggle::emergency_multisig_toggle_handler;
 pub use approve_proposal::approve_proposal_handler;
 pub use execute_proposal::execute_proposal_handler;
 pub use create_multisig::create_multisig_handler;
 pub use create_proposal::create_proposal_handler;
+pub use create_program_config::create_program_config_handler;
+pub use update_program_config::update_program_config_handler;
+pub use create_emergency_multisig::create_emergency_multisig_handler;

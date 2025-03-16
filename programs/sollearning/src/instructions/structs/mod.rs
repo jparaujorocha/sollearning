@@ -13,3 +13,6 @@ pub mod register_student_struct;
 pub mod set_educator_status_struct;
 pub mod transfer_struct;
 pub mod update_course_struct;
+pub mod create_program_config_struct;
+pub mod update_program_config_struct;
+pub mod create_emergency_multisig_struct;

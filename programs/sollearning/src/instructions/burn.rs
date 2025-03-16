@@ -4,8 +4,13 @@ use crate::states::program::ProgramState;
 use crate::states::course::TokensBurned;
 use crate::error::SolLearningError;
 use crate::instructions::structs::burn_struct::BurnInstruction;
+use crate::utils::pause::{check_program_running, check_function_running};
+use crate::constants::PAUSE_FLAG_BURN;
 
 pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
+    check_program_running(&ctx.accounts.program_state)?;
+    check_function_running(&ctx.accounts.program_state, PAUSE_FLAG_BURN)?;
+    
     validate_burn_amount(amount)?;
 
     let token_balance = token::accessor::amount(&ctx.accounts.token_account)?;
@@ -34,7 +39,6 @@ fn validate_burn_amount(amount: u64) -> Result<()> {
     require!(amount > 0, SolLearningError::InvalidAmount);
     Ok(())
 }
-
 fn burn_tokens(ctx: &Context<BurnInstruction>, amount: u64) -> Result<()> {
     token::burn(
         CpiContext::new(

@@ -7,14 +7,20 @@ use crate::states::course::{CourseCompletion, CourseCompleted, TokensMinted};
 use crate::error::SolLearningError;
 use crate::constants::*;
 use crate::instructions::structs::mint_struct::MintToStudent;
+use crate::utils::pause::{check_program_running, check_function_running};
 
 pub fn mint_to_student_handler(ctx: Context<MintToStudent>, amount: u64, course_id: String) -> Result<()> {
+    check_program_running(&ctx.accounts.program_state)?;
+    check_function_running(&ctx.accounts.program_state, PAUSE_FLAG_MINT)?;
+    
     validate_mint_amount(amount, &ctx.accounts.educator)?;
 
     let current_time = Clock::get()?.unix_timestamp;
+    
+    validate_mint_cooldown(&ctx.accounts.educator, current_time)?;
+    
     let student_previous_balance = token::accessor::amount(&ctx.accounts.student_token_account)?;
 
-    // Extract values before mutably borrowing `ctx`
     let student_key = ctx.accounts.student.key();
     let educator_key = ctx.accounts.educator.key();
     let course_name = ctx.accounts.course.course_name.clone();
@@ -25,7 +31,7 @@ pub fn mint_to_student_handler(ctx: Context<MintToStudent>, amount: u64, course_
         let student_info = &mut ctx.accounts.student_info;
         let course_completion = &mut ctx.accounts.course_completion;
 
-        update_educator_stats(educator, amount)?;
+        update_educator_stats(educator, amount, current_time)?;
         update_program_state(program_state, amount)?;
         update_student_info(student_info, amount, current_time)?;
         initialize_course_completion(course_completion, student_key, &course_id, educator_key, amount, current_time)?;
@@ -43,8 +49,18 @@ fn validate_mint_amount(amount: u64, educator: &Account<EducatorAccount>) -> Res
     Ok(())
 }
 
-fn update_educator_stats(educator: &mut Account<EducatorAccount>, amount: u64) -> Result<()> {
+fn validate_mint_cooldown(educator: &Account<EducatorAccount>, current_time: i64) -> Result<()> {
+    let time_since_last_mint = current_time - educator.last_mint_time;
+    require!(
+        time_since_last_mint >= MINT_COOLDOWN_PERIOD || educator.last_mint_time == 0,
+        SolLearningError::MintingTooFrequent
+    );
+    Ok(())
+}
+
+fn update_educator_stats(educator: &mut Account<EducatorAccount>, amount: u64, current_time: i64) -> Result<()> {
     educator.total_minted = educator.total_minted.checked_add(amount).ok_or(SolLearningError::Overflow)?;
+    educator.last_mint_time = current_time;
     Ok(())
 }
 

@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token};
 use anchor_spl::associated_token::AssociatedToken;
 use crate::states::program::ProgramState;
+use crate::states::config::ProgramConfig;
 use crate::constants::*;
 
 #[derive(Accounts)]
@@ -17,6 +18,15 @@ pub struct InitializeAccounts<'info> {
         bump,
     )]
     pub program_state: Account<'info, ProgramState>,
+
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + std::mem::size_of::<ProgramConfig>(),
+        seeds = [CONFIG_SEED],
+        bump,
+    )]
+    pub program_config: Account<'info, ProgramConfig>,
 
     #[account(
         init,

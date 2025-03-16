@@ -4,6 +4,7 @@ use crate::states::course::{Course, CourseCreated};
 use crate::constants::*;
 use crate::error::SolLearningError;
 use crate::instructions::structs::create_course_struct::CreateCourse;
+use crate::utils::pause::{check_program_running, check_function_running};
 
 pub fn create_course_handler(
     ctx: Context<CreateCourse>,
@@ -12,6 +13,9 @@ pub fn create_course_handler(
     reward_amount: u64,
     metadata_hash: [u8; 32],
 ) -> Result<()> {
+    check_program_running(&ctx.accounts.program_state)?;
+    check_function_running(&ctx.accounts.program_state, PAUSE_FLAG_COURSE)?;
+
     validate_course_details(&course_id, &course_name, reward_amount, &ctx.accounts.educator)?;
 
     let current_time = Clock::get()?.unix_timestamp;

@@ -10,6 +10,7 @@ pub struct EducatorAccount {
     pub is_active: bool,
     pub created_at: i64,
     pub last_updated_at: i64, 
+    pub last_mint_time: i64,
     pub bump: u8,
 }
 

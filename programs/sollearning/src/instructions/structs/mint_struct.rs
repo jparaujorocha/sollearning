@@ -39,12 +39,14 @@ pub struct MintToStudent<'info> {
         constraint = course.educator == educator.key() @ SolLearningError::CourseNotOwnedByEducator,
     )]
     pub course: Account<'info, Course>, 
+    
     #[account(
         init,
         payer = educator_authority,
         space = 8 + std::mem::size_of::<CourseCompletion>(),
         seeds = [COURSE_COMPLETION_SEED, student.key().as_ref(), course_id.as_bytes()],
         bump,
+        constraint = course.is_active @ SolLearningError::CourseInactive,
     )]
     pub course_completion: Account<'info, CourseCompletion>,
 

@@ -121,4 +121,10 @@ pub enum SolLearningError {
     
     #[msg("Cannot create course history record")]
     CannotCreateCourseHistory,
+
+    #[msg("Unauthorized - only the program authority can perform this action")]
+    UnauthorizedAuthority,
+    
+    #[msg("Function is paused")]
+    FunctionPaused,
 }

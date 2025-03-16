@@ -2,8 +2,13 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self};
 use crate::error::SolLearningError;
 use crate::instructions::structs::transfer_struct::TransferInstruction;
+use crate::utils::pause::{check_program_running, check_function_running};
+use crate::constants::PAUSE_FLAG_TRANSFER;
 
 pub fn transfer_handler(ctx: Context<TransferInstruction>, amount: u64) -> Result<()> {
+    check_program_running(&ctx.accounts.program_state)?;
+    check_function_running(&ctx.accounts.program_state, PAUSE_FLAG_TRANSFER)?;
+    
     validate_transfer_amount(amount)?;
     
     let from_balance = token::accessor::amount(&ctx.accounts.from)?;
@@ -24,7 +29,7 @@ fn validate_transfer_amount(amount: u64) -> Result<()> {
 }
 
 fn validate_sender_balance(from_balance: u64, amount: u64) -> Result<()> {
-    let buffer_amount = amount / 10; // 10% buffer
+    let buffer_amount = amount / 10;
     require!(
         from_balance >= amount.checked_add(buffer_amount).ok_or(SolLearningError::Overflow)?,
         SolLearningError::TransferFrontRunning
