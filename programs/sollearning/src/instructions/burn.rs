@@ -1,53 +1,41 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token};
+use anchor_spl::token::{self};
 use crate::states::program::ProgramState;
 use crate::states::course::TokensBurned;
 use crate::error::SolLearningError;
-use crate::constants::*;
-
-#[derive(Accounts)]
-#[instruction(amount: u64)]
-pub struct BurnInstruction<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
-
-    #[account(
-        mut,
-        constraint = token::accessor::mint(&token_account)? == token_mint.key() @ SolLearningError::InvalidMint,
-        constraint = token::accessor::authority(&token_account)? == owner.key() @ SolLearningError::Unauthorized,
-    )]
-    /// CHECK: We verify through constraints that this is a valid token account 
-    pub token_account: AccountInfo<'info>,
-
-    /// CHECK: We verify through constraints that this is a valid token account
-    #[account(
-        mut,
-        address = program_state.token_mint,
-    )]
-    pub token_mint: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-        // Add constraint to ensure only program authority can burn tokens
-        constraint = (owner.key() == program_state.authority) @ SolLearningError::BurnNotAuthorized,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-
-    pub token_program: Program<'info, Token>,
-}
+use crate::instructions::structs::burn_struct::BurnInstruction;
 
 pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
-    // Validate burn amount
-    require!(amount > 0, SolLearningError::InvalidAmount);
+    validate_burn_amount(amount)?;
 
-    // Get current token balance for improved logging
     let token_balance = token::accessor::amount(&ctx.accounts.token_account)?;
     require!(token_balance >= amount, SolLearningError::InsufficientBalance);
 
-    // Execute token burn
+    let new_balance = token_balance - amount;
+    
+    burn_tokens(&ctx, amount)?;
+    update_burned_tokens(&mut ctx.accounts.program_state, amount)?;
+
+    emit_tokens_burned(ctx.accounts.owner.key(), amount)?;
+
+    msg!(
+        "Burned {} tokens from {}. Previous balance: {}, New balance: {}, Total burned: {}",
+        amount,
+        ctx.accounts.owner.key(),
+        token_balance,
+        new_balance,
+        ctx.accounts.program_state.total_burned
+    );
+
+    Ok(())
+}
+
+fn validate_burn_amount(amount: u64) -> Result<()> {
+    require!(amount > 0, SolLearningError::InvalidAmount);
+    Ok(())
+}
+
+fn burn_tokens(ctx: &Context<BurnInstruction>, amount: u64) -> Result<()> {
     token::burn(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -59,35 +47,25 @@ pub fn burn_handler(ctx: Context<BurnInstruction>, amount: u64) -> Result<()> {
         ),
         amount,
     )?;
+    Ok(())
+}
 
-    // Update program state to track burned tokens
-    let program_state = &mut ctx.accounts.program_state;
+fn update_burned_tokens(program_state: &mut Account<ProgramState>, amount: u64) -> Result<()> {
     program_state.total_burned = program_state
         .total_burned
         .checked_add(amount)
         .ok_or(SolLearningError::Overflow)?;
+    Ok(())
+}
 
-    // Get current timestamp for event
-    let current_time = Clock::get()?.unix_timestamp;
+fn emit_tokens_burned(burner: Pubkey, amount: u64) -> Result<()> {
+    let timestamp = Clock::get()?.unix_timestamp;
 
-    // Calculate new balance for improved logging
-    let new_balance = token_balance - amount;
-
-    // Emit token burn event
     emit!(TokensBurned {
-        burner: ctx.accounts.owner.key(),
+        burner,
         amount,
-        timestamp: current_time,
+        timestamp,
     });
-
-    msg!(
-        "Burned {} tokens from {} by authority - Previous balance: {}, New balance: {}, Total burned: {}",
-        amount,
-        ctx.accounts.owner.key(),
-        token_balance,
-        new_balance,
-        program_state.total_burned
-    );
 
     Ok(())
 }

@@ -1,44 +1,9 @@
 use anchor_lang::prelude::*;
-use crate::states::program::ProgramState;
 use crate::states::educator::EducatorAccount;
 use crate::states::course::{Course, CourseCreated};
 use crate::constants::*;
 use crate::error::SolLearningError;
-
-#[derive(Accounts)]
-#[instruction(course_id: String, course_name: String, reward_amount: u64, metadata_hash: [u8; 32])]
-pub struct CreateCourse<'info> {
-    #[account(
-        mut,
-        constraint = educator.is_active @ SolLearningError::InactiveEducator,
-        constraint = educator.course_count < MAX_COURSES_PER_EDUCATOR @ SolLearningError::MaxCoursesPerEducatorReached,
-    )]
-    pub educator: Account<'info, EducatorAccount>,
-    
-    #[account(
-        mut,
-        constraint = educator_authority.key() == educator.educator_address @ SolLearningError::Unauthorized,
-    )]
-    pub educator_authority: Signer<'info>,
-    
-    #[account(
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-    
-    #[account(
-        init,
-        payer = educator_authority,
-        space = 8 + 4 + course_id.len() + 4 + course_name.len() + 32 + 8 + 4 + 1 + 32 + 8 + 8 + 1,
-        seeds = [COURSE_SEED, educator.key().as_ref(), course_id.as_bytes()],
-        bump,
-    )]
-    pub course: Account<'info, Course>,
-    
-    pub system_program: Program<'info, System>,
-}
+use crate::instructions::structs::create_course_struct::CreateCourse;
 
 pub fn create_course_handler(
     ctx: Context<CreateCourse>,
@@ -47,52 +12,92 @@ pub fn create_course_handler(
     reward_amount: u64,
     metadata_hash: [u8; 32],
 ) -> Result<()> {
-    // Validate course_id and course_name lengths
-    require!(!course_id.is_empty() && course_id.len() <= MAX_COURSE_ID_LENGTH, 
-        SolLearningError::CourseIdTooLong);
-    
-    require!(!course_name.is_empty() && course_name.len() <= MAX_COURSE_NAME_LENGTH, 
-        SolLearningError::CourseNameTooLong);
-    
-    // Validate reward amount is within educator's limit
-    require!(reward_amount > 0 && reward_amount <= ctx.accounts.educator.mint_limit, 
-        SolLearningError::InvalidCourseReward);
-    
+    validate_course_details(&course_id, &course_name, reward_amount, &ctx.accounts.educator)?;
+
     let current_time = Clock::get()?.unix_timestamp;
-    
-    // Update the course account
-    let course = &mut ctx.accounts.course;
-    course.course_id = course_id.clone();
-    course.course_name = course_name.clone();
-    course.educator = ctx.accounts.educator.key();
-    course.reward_amount = reward_amount;
-    course.completion_count = 0;
-    course.is_active = true;
-    course.metadata_hash = metadata_hash;
-    course.created_at = current_time;
-    course.last_updated_at = current_time;
-    course.bump = ctx.bumps.course;
-    
-    // Update educator's course count
-    let educator = &mut ctx.accounts.educator;
-    educator.course_count = educator.course_count.checked_add(1)
-        .ok_or(SolLearningError::Overflow)?;
-    
-    // Emit course creation event
-    emit!(CourseCreated {
-        course_id: course_id.clone(),
-        course_name: course_name.clone(),
-        educator: ctx.accounts.educator.key(),
+
+    initialize_course(
+        &mut ctx.accounts.course,
+        &course_id,
+        &course_name,
+        ctx.accounts.educator.key(),
         reward_amount,
-        timestamp: current_time,
-    });
-    
+        metadata_hash,
+        current_time,
+        ctx.bumps.course,
+    )?;
+
+    increment_educator_course_count(&mut ctx.accounts.educator)?;
+
+    emit_course_created(&course_id, &course_name, ctx.accounts.educator.key(), reward_amount, current_time)?;
+
     msg!(
         "Created course '{}' with ID {} by educator {}",
         course_name,
         course_id,
         ctx.accounts.educator.key()
     );
-    
+
+    Ok(())
+}
+
+fn validate_course_details(course_id: &str, course_name: &str, reward_amount: u64, educator: &Account<EducatorAccount>) -> Result<()> {
+    require!(
+        !course_id.is_empty() && course_id.len() <= MAX_COURSE_ID_LENGTH,
+        SolLearningError::CourseIdTooLong
+    );
+
+    require!(
+        !course_name.is_empty() && course_name.len() <= MAX_COURSE_NAME_LENGTH,
+        SolLearningError::CourseNameTooLong
+    );
+
+    require!(
+        reward_amount > 0 && reward_amount <= educator.mint_limit,
+        SolLearningError::InvalidCourseReward
+    );
+
+    Ok(())
+}
+
+fn initialize_course(
+    course: &mut Account<Course>,
+    course_id: &str,
+    course_name: &str,
+    educator_key: Pubkey,
+    reward_amount: u64,
+    metadata_hash: [u8; 32],
+    current_time: i64,
+    bump: u8,
+) -> Result<()> {
+    course.course_id = course_id.to_string();
+    course.course_name = course_name.to_string();
+    course.educator = educator_key;
+    course.reward_amount = reward_amount;
+    course.completion_count = 0;
+    course.is_active = true;
+    course.metadata_hash = metadata_hash;
+    course.created_at = current_time;
+    course.last_updated_at = current_time;
+    course.bump = bump;
+    Ok(())
+}
+
+fn increment_educator_course_count(educator: &mut Account<EducatorAccount>) -> Result<()> {
+    educator.course_count = educator
+        .course_count
+        .checked_add(1)
+        .ok_or(SolLearningError::Overflow)?;
+    Ok(())
+}
+
+fn emit_course_created(course_id: &str, course_name: &str, educator_key: Pubkey, reward_amount: u64, timestamp: i64) -> Result<()> {
+    emit!(CourseCreated {
+        course_id: course_id.to_string(),
+        course_name: course_name.to_string(),
+        educator: educator_key,
+        reward_amount,
+        timestamp,
+    });
     Ok(())
 }

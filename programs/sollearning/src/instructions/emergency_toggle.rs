@@ -1,48 +1,34 @@
 use anchor_lang::prelude::*;
 use crate::states::program::{ProgramState, ProgramStatusChanged};
-use crate::error::SolLearningError;
-use crate::constants::*;
+use crate::instructions::structs::emergency_toggle_struct::EmergencyToggle;
 
-#[derive(Accounts)]
-pub struct EmergencyToggle<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == program_state.authority @ SolLearningError::Unauthorized,
-    )]
-    pub authority: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-    )]
-    pub program_state: Account<'info, ProgramState>,
+pub fn emergency_toggle_handler(ctx: Context<EmergencyToggle>, paused: bool) -> Result<()> {
+    update_program_status(&mut ctx.accounts.program_state, paused)?;
+    emit_status_change(&ctx, paused)?;
+    log_status_change(&ctx, paused);
+
+    Ok(())
 }
 
-pub fn emergency_toggle_handler(
-    ctx: Context<EmergencyToggle>,
-    paused: bool,
-) -> Result<()> {
-    let program_state = &mut ctx.accounts.program_state;
-    
-    // Update program paused status
+fn update_program_status(program_state: &mut Account<ProgramState>, paused: bool) -> Result<()> {
     program_state.paused = paused;
-    
-    // Get current timestamp for event
-    let current_time = Clock::get()?.unix_timestamp;
-    
-    // Emit event for program status change
+    Ok(())
+}
+
+fn emit_status_change(ctx: &Context<EmergencyToggle>, paused: bool) -> Result<()> {
     emit!(ProgramStatusChanged {
         paused,
         authority: ctx.accounts.authority.key(),
-        timestamp: current_time,
+        timestamp: Clock::get()?.unix_timestamp,
     });
+    Ok(())
+}
 
+fn log_status_change(ctx: &Context<EmergencyToggle>, paused: bool) {
     msg!(
         "Program {} by authority {}",
         if paused { "paused" } else { "resumed" },
         ctx.accounts.authority.key()
     );
-
-    Ok(())
 }

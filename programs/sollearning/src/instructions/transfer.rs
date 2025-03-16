@@ -1,60 +1,38 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token};
-use crate::states::program::ProgramState;
+use anchor_spl::token::{self};
 use crate::error::SolLearningError;
-use crate::constants::*;
-
-#[derive(Accounts)]
-#[instruction(amount: u64)]
-pub struct TransferInstruction<'info> {
-    #[account(mut)]
-    pub sender: Signer<'info>,
-
-    #[account(
-        mut,
-        constraint = token::accessor::mint(&from)? == token_mint.key() @ SolLearningError::InvalidMint,
-        constraint = token::accessor::authority(&from)? == sender.key() @ SolLearningError::Unauthorized,
-    )]
-    /// CHECK: We verify through constraints that this is a valid token account for the sender
-    pub from: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        constraint = token::accessor::mint(&to)? == token_mint.key() @ SolLearningError::InvalidMint,
-    )]
-    /// CHECK: We verify that this is a valid token account with the correct mint
-    pub to: AccountInfo<'info>,
-
-    /// CHECK: We verify that this is a token account with the correct mint
-    #[account(address = program_state.token_mint)]
-    pub token_mint: AccountInfo<'info>,
-
-    #[account(
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-
-    pub token_program: Program<'info, Token>,
-}
+use crate::instructions::structs::transfer_struct::TransferInstruction;
 
 pub fn transfer_handler(ctx: Context<TransferInstruction>, amount: u64) -> Result<()> {
-    // Validate the transfer amount
-    require!(amount > 0, SolLearningError::InvalidAmount);
+    validate_transfer_amount(amount)?;
     
-    // Get current balances for improved logging and front-running protection
     let from_balance = token::accessor::amount(&ctx.accounts.from)?;
     let to_balance = token::accessor::amount(&ctx.accounts.to)?;
-    
-    // Verify sender has sufficient balance with buffer to prevent front-running
+
+    validate_sender_balance(from_balance, amount)?;
+
+    execute_transfer(&ctx, amount)?;
+
+    log_transfer(&ctx, amount, from_balance, to_balance)?;
+
+    Ok(())
+}
+
+fn validate_transfer_amount(amount: u64) -> Result<()> {
+    require!(amount > 0, SolLearningError::InvalidAmount);
+    Ok(())
+}
+
+fn validate_sender_balance(from_balance: u64, amount: u64) -> Result<()> {
     let buffer_amount = amount / 10; // 10% buffer
     require!(
-        from_balance >= amount.checked_add(buffer_amount).ok_or(SolLearningError::Overflow)?, 
+        from_balance >= amount.checked_add(buffer_amount).ok_or(SolLearningError::Overflow)?,
         SolLearningError::TransferFrontRunning
     );
+    Ok(())
+}
 
-    // Execute the transfer
+fn execute_transfer(ctx: &Context<TransferInstruction>, amount: u64) -> Result<()> {
     token::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -66,8 +44,10 @@ pub fn transfer_handler(ctx: Context<TransferInstruction>, amount: u64) -> Resul
         ),
         amount,
     )?;
+    Ok(())
+}
 
-    // Calculate new balances for improved logging
+fn log_transfer(ctx: &Context<TransferInstruction>, amount: u64, from_balance: u64, to_balance: u64) -> Result<()> {
     let new_from_balance = from_balance - amount;
     let new_to_balance = to_balance + amount;
 

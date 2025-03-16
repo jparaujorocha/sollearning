@@ -1,151 +1,85 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token};
-use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self};
 use crate::states::program::ProgramState;
 use crate::states::educator::EducatorAccount;
 use crate::states::student::StudentInfo;
-use crate::states::course::{Course, CourseCompletion, CourseCompleted, TokensMinted};
+use crate::states::course::{CourseCompletion, CourseCompleted, TokensMinted};
 use crate::error::SolLearningError;
 use crate::constants::*;
+use crate::instructions::structs::mint_struct::MintToStudent;
 
-// Define minimum time between mintages to the same student (cooldown period)
-const MIN_MINTAGE_INTERVAL: i64 = 3600; // 1 hour in seconds
+pub fn mint_to_student_handler(ctx: Context<MintToStudent>, amount: u64, course_id: String) -> Result<()> {
+    validate_mint_amount(amount, &ctx.accounts.educator)?;
 
-#[derive(Accounts)]
-#[instruction(amount: u64, course_id: String)]
-pub struct MintToStudent<'info> {
-    #[account(
-        constraint = educator.is_active @ SolLearningError::InactiveEducator,
-    )]
-    pub educator: Account<'info, EducatorAccount>,
-    
-    #[account(
-        mut,
-        constraint = educator_authority.key() == educator.educator_address @ SolLearningError::Unauthorized,
-    )]
-    pub educator_authority: Signer<'info>,
-    
-    #[account(
-        mut,
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-    
-    #[account(
-        mut,
-        address = program_state.token_mint,
-    )]
-    /// CHECK: We verify that this mint corresponds to the one configured in the program state
-    pub token_mint: AccountInfo<'info>,
-    
-    #[account(
-        mut,
-        seeds = [STUDENT_SEED, student.key().as_ref()],
-        bump = student_info.bump,
-        // Add constraint to check cooldown period
-        constraint = Clock::get()?.unix_timestamp - student_info.last_activity >= MIN_MINTAGE_INTERVAL
-            @ SolLearningError::MintingTooFrequent,
-    )]
-    pub student_info: Account<'info, StudentInfo>,
-    /// CHECK: Used only as a reference to derive the student_info PDA
-    pub student: AccountInfo<'info>,
-    
-    #[account(
-        mut,
-        constraint = token::accessor::mint(&student_token_account)? == program_state.token_mint @ SolLearningError::InvalidMint,
-        constraint = token::accessor::authority(&student_token_account)? == student.key() @ SolLearningError::Unauthorized,
-    )]
-    /// CHECK: We verify through constraints that this is a valid token account for the student
-    pub student_token_account: AccountInfo<'info>,
-    
-    #[account(
-        seeds = [COURSE_SEED, educator.key().as_ref(), course_id.as_bytes()],
-        bump = course.bump,
-        constraint = course.educator == educator.key() @ SolLearningError::CourseNotOwnedByEducator,
-        constraint = course.is_active @ SolLearningError::CourseInactive,
-    )]
-    pub course: Account<'info, Course>,
-    
-    #[account(
-        init,
-        payer = educator_authority,
-        space = 8 + 32 + 4 + course_id.len() + 32 + 8 + 8 + 1,
-        seeds = [COURSE_COMPLETION_SEED, student.key().as_ref(), course_id.as_bytes()],
-        bump,
-    )]
-    pub course_completion: Account<'info, CourseCompletion>,
-    
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub rent: Sysvar<'info, Rent>,
+    let current_time = Clock::get()?.unix_timestamp;
+    let student_previous_balance = token::accessor::amount(&ctx.accounts.student_token_account)?;
+
+    // Extract values before mutably borrowing `ctx`
+    let student_key = ctx.accounts.student.key();
+    let educator_key = ctx.accounts.educator.key();
+    let course_name = ctx.accounts.course.course_name.clone();
+
+    {
+        let educator = &mut ctx.accounts.educator;
+        let program_state = &mut ctx.accounts.program_state;
+        let student_info = &mut ctx.accounts.student_info;
+        let course_completion = &mut ctx.accounts.course_completion;
+
+        update_educator_stats(educator, amount)?;
+        update_program_state(program_state, amount)?;
+        update_student_info(student_info, amount, current_time)?;
+        initialize_course_completion(course_completion, student_key, &course_id, educator_key, amount, current_time)?;
+    }
+
+    mint_tokens_to_student(&ctx, amount)?;
+    emit_events(&ctx, amount, &course_id, current_time)?;
+    log_minting(&ctx, amount, &course_id, student_previous_balance, &course_name)?;
+
+    Ok(())
 }
 
-pub fn mint_to_student_handler(
-    ctx: Context<MintToStudent>,
-    amount: u64,
-    course_id: String,
-) -> Result<()> {
-    // Validate the amount provided by the user
-    require!(amount > 0 && amount <= ctx.accounts.educator.mint_limit, 
-        SolLearningError::InvalidAmount);
-    
-    let current_time = Clock::get()?.unix_timestamp;
-    
-    // Get current student balances for improved logging
-    let student_previous_balance = token::accessor::amount(&ctx.accounts.student_token_account)?;
-    
-    // Update educator stats
-    let educator = &mut ctx.accounts.educator;
-    educator.total_minted = educator.total_minted
-        .checked_add(amount)
-        .ok_or(SolLearningError::Overflow)?;
-    
-    // Update program state
-    let program_state = &mut ctx.accounts.program_state;
-    program_state.total_minted = program_state.total_minted
-        .checked_add(amount)
-        .ok_or(SolLearningError::Overflow)?;
-    
-    // Update student info
-    let student_info = &mut ctx.accounts.student_info;
-    student_info.total_earned = student_info.total_earned
-        .checked_add(amount)
-        .ok_or(SolLearningError::Overflow)?;
-    student_info.courses_completed = student_info.courses_completed
-        .checked_add(1)
-        .ok_or(SolLearningError::Overflow)?;
+fn validate_mint_amount(amount: u64, educator: &Account<EducatorAccount>) -> Result<()> {
+    require!(amount > 0 && amount <= educator.mint_limit, SolLearningError::InvalidAmount);
+    Ok(())
+}
+
+fn update_educator_stats(educator: &mut Account<EducatorAccount>, amount: u64) -> Result<()> {
+    educator.total_minted = educator.total_minted.checked_add(amount).ok_or(SolLearningError::Overflow)?;
+    Ok(())
+}
+
+fn update_program_state(program_state: &mut Account<ProgramState>, amount: u64) -> Result<()> {
+    program_state.total_minted = program_state.total_minted.checked_add(amount).ok_or(SolLearningError::Overflow)?;
+    Ok(())
+}
+
+fn update_student_info(student_info: &mut Account<StudentInfo>, amount: u64, current_time: i64) -> Result<()> {
+    student_info.total_earned = student_info.total_earned.checked_add(amount).ok_or(SolLearningError::Overflow)?;
+    student_info.courses_completed = student_info.courses_completed.checked_add(1).ok_or(SolLearningError::Overflow)?;
     student_info.last_activity = current_time;
-    
-    // Encontre o bump manualmente para o CourseCompletion
-    let (_, bump) = Pubkey::find_program_address(
-        &[COURSE_COMPLETION_SEED, ctx.accounts.student.key().as_ref(), course_id.as_bytes()],
-        ctx.program_id
-    );
-    
-    // Update course completion
-    let course_completion = &mut ctx.accounts.course_completion;
-    course_completion.student = ctx.accounts.student.key();
-    course_completion.course_id = course_id.clone();
-    course_completion.verified_by = ctx.accounts.educator_authority.key();
+    Ok(())
+}
+
+fn initialize_course_completion(
+    course_completion: &mut Account<CourseCompletion>,
+    student: Pubkey,
+    course_id: &str,
+    educator: Pubkey,
+    amount: u64,
+    current_time: i64,
+) -> Result<()> {
+    course_completion.student = student;
+    course_completion.course_id = course_id.to_string();
+    course_completion.verified_by = educator;
     course_completion.completion_time = current_time;
     course_completion.tokens_awarded = amount;
-    course_completion.bump = bump;
-    
-    // Update course stats
-    let course = &ctx.accounts.course;
-    let mut course_completion_count = course.completion_count;
-    course_completion_count = course_completion_count
-        .checked_add(1)
-        .ok_or(SolLearningError::Overflow)?;
-    
-    // Prepare to mint tokens to student
-    let program_state_seeds = &[PROGRAM_STATE_SEED, &[program_state.bump]];
-    let program_state_signer = &[&program_state_seeds[..]];
-    
-    // Mint tokens to student
+    Ok(())
+}
+
+fn mint_tokens_to_student(ctx: &Context<MintToStudent>, amount: u64) -> Result<()> {
+    let signer_seeds = &[PROGRAM_STATE_SEED, &[ctx.accounts.program_state.bump]];
+    let signer = &[&signer_seeds[..]];
+
     token::mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -154,40 +88,42 @@ pub fn mint_to_student_handler(
                 to: ctx.accounts.student_token_account.to_account_info(),
                 authority: ctx.accounts.program_state.to_account_info(),
             },
-            program_state_signer,
+            signer,
         ),
         amount,
     )?;
-    
-    // Calculate new balance for logging
-    let student_new_balance = student_previous_balance + amount;
-    
-    // Emit completion event
+    Ok(())
+}
+
+fn emit_events(ctx: &Context<MintToStudent>, amount: u64, course_id: &str, timestamp: i64) -> Result<()> {
     emit!(CourseCompleted {
         student: ctx.accounts.student.key(),
-        course_id: course_id.clone(),
+        course_id: course_id.to_string(),
         educator: ctx.accounts.educator.key(),
         tokens_awarded: amount,
-        timestamp: current_time,
+        timestamp,
     });
-    
-    // Emit token minting event
+
     emit!(TokensMinted {
         recipient: ctx.accounts.student.key(),
         amount,
         minted_by: ctx.accounts.educator_authority.key(),
-        timestamp: current_time,
+        timestamp,
     });
-    
+
+    Ok(())
+}
+
+fn log_minting(ctx: &Context<MintToStudent>, amount: u64, course_id: &str, student_previous_balance: u64, course_name: &str) -> Result<()> {
+    let student_new_balance = student_previous_balance + amount;
     msg!(
         "Minted {} tokens to student {} for completing course '{}' ({}) - Previous balance: {}, New balance: {}",
         amount,
         ctx.accounts.student.key(),
-        ctx.accounts.course.course_name,
+        course_name,
         course_id,
         student_previous_balance,
         student_new_balance
     );
-    
     Ok(())
 }

@@ -1,33 +1,8 @@
 use anchor_lang::prelude::*;
-use crate::states::program::ProgramState;
 use crate::states::educator::EducatorAccount;
 use crate::constants::*;
 use crate::error::SolLearningError;
-
-#[derive(Accounts)]
-pub struct SetEducatorStatus<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == program_state.authority @ SolLearningError::Unauthorized,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-    )]
-    pub authority: Signer<'info>,
-
-    #[account(
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-    /// CHECK: Used only as a reference to derive the PDA of the educator account
-    pub educator: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        seeds = [EDUCATOR_SEED, educator.key().as_ref()],
-        bump = educator_account.bump,
-    )]
-    pub educator_account: Account<'info, EducatorAccount>,
-}
+use crate::instructions::structs::set_educator_status_struct::SetEducatorStatus;
 
 pub fn set_educator_status_handler(
     ctx: Context<SetEducatorStatus>,
@@ -35,26 +10,41 @@ pub fn set_educator_status_handler(
     new_mint_limit: Option<u64>,
 ) -> Result<()> {
     let current_time = Clock::get()?.unix_timestamp;
-    let educator_account = &mut ctx.accounts.educator_account;
-    
-    // Update status
+
+    update_educator_status(&mut ctx.accounts.educator_account, is_active, new_mint_limit, current_time)?;
+
+    log_status_update(&ctx, is_active, new_mint_limit);
+
+    Ok(())
+}
+
+fn update_educator_status(
+    educator_account: &mut Account<EducatorAccount>,
+    is_active: bool,
+    new_mint_limit: Option<u64>,
+    current_time: i64,
+) -> Result<()> {
     educator_account.is_active = is_active;
-    
-    // Update mint limit if provided
+
     if let Some(mint_limit) = new_mint_limit {
         require!(mint_limit > 0 && mint_limit <= MAX_MINT_AMOUNT, SolLearningError::InvalidAmount);
         educator_account.mint_limit = mint_limit;
     }
-    
-    // Update last updated timestamp
+
     educator_account.last_updated_at = current_time;
+    Ok(())
+}
+
+fn log_status_update(ctx: &Context<SetEducatorStatus>, is_active: bool, new_mint_limit: Option<u64>) {
+    let mint_limit_msg = match new_mint_limit {
+        Some(limit) => format!(", new mint limit: {}", limit),
+        None => String::new(),
+    };
 
     msg!(
         "Updated educator {} status to {}{}",
         ctx.accounts.educator.key(),
         if is_active { "active" } else { "inactive" },
-        if new_mint_limit.is_some() { format!(", new mint limit: {}", new_mint_limit.unwrap()) } else { String::from("") }
+        mint_limit_msg
     );
-
-    Ok(())
 }

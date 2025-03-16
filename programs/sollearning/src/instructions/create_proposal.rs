@@ -1,96 +1,121 @@
 use anchor_lang::prelude::*;
-use crate::state::{Multisig, Proposal, ProposalInstruction, ProposalStatus, ProposalCreated};
+use crate::states::signers::Multisig;
+use crate::states::proposal::{Proposal, ProposalStatus, ProposalInstruction, ProposalCreated};
 use crate::error::SolLearningError;
 use crate::constants::*;
-
-#[derive(Accounts)]
-#[instruction(instruction: ProposalInstruction, description: String)]
-pub struct CreateProposal<'info> {
-    #[account(mut)]
-    pub proposer: Signer<'info>,
-    
-    #[account(
-        mut,
-        seeds = [MULTISIG_SEED],
-        bump = multisig.bump,
-        constraint = multisig.signers.contains(&proposer.key()) @ SolLearningError::Unauthorized,
-    )]
-    pub multisig: Account<'info, Multisig>,
-    
-    #[account(
-        init,
-        payer = proposer,
-        space = 8 + 32 + 8 + 100 + 4 + (multisig.signers.len()) + 1 + 8 + 8 + 4 + description.len() + 1,
-        seeds = [PROPOSAL_SEED, multisig.key().as_ref(), &multisig.proposal_count.to_le_bytes()],
-        bump,
-    )]
-    pub proposal: Account<'info, Proposal>,
-    
-    pub system_program: Program<'info, System>,
-}
+use crate::instructions::structs::create_proposal_struct::CreateProposal;
 
 pub fn create_proposal_handler(
     ctx: Context<CreateProposal>,
     instruction: ProposalInstruction,
     description: String,
 ) -> Result<()> {
-    // Validate description length
-    require!(description.len() <= MAX_DESCRIPTION_LENGTH, SolLearningError::DescriptionTooLong);
-    
-    // Get the current proposal index and increment it
-    let multisig = &mut ctx.accounts.multisig;
-    let proposal_index = multisig.proposal_count;
-    multisig.proposal_count = multisig.proposal_count.checked_add(1).ok_or(SolLearningError::Overflow)?;
-    
-    // Get current timestamp
-    let current_time = Clock::get()?.unix_timestamp;
-    
-    // Get bump
-    let (_, bump) = Pubkey::find_program_address(
-        &[
-            PROPOSAL_SEED,
-            multisig.key().as_ref(),
-            &proposal_index.to_le_bytes(),
-        ],
-        ctx.program_id
-    );
-    
-    // Initialize proposal account
-    let proposal = &mut ctx.accounts.proposal;
-    proposal.multisig = multisig.key();
-    proposal.index = proposal_index;
-    proposal.instruction = instruction.clone();
-    
-    // Initialize signers approval status (all false)
-    let mut signers_approval = Vec::with_capacity(multisig.signers.len());
-    for i in 0..multisig.signers.len() {
-        // Auto-approve the proposal for the proposer
-        let is_approved = multisig.signers[i] == ctx.accounts.proposer.key();
-        signers_approval.push(is_approved);
-    }
-    
-    proposal.signers = signers_approval;
-    proposal.status = ProposalStatus::Active;
-    proposal.created_at = current_time;
-    proposal.closed_at = None;
-    proposal.description = description.clone();
-    proposal.bump = bump;
-    
-    // Emit proposal creation event
-    emit!(ProposalCreated {
-        multisig: multisig.key(),
-        proposal: proposal.key(),
-        proposer: ctx.accounts.proposer.key(),
-        instruction: instruction.clone(),
-        description: description.clone(),
-        timestamp: current_time,
-    });
-    
+    validate_description(&description)?;
+
+    let multisig: &mut Account<'_, Multisig> = &mut ctx.accounts.multisig;
+    let proposal_index: u64 = increment_proposal_count(multisig)?;
+    let current_time: i64 = Clock::get()?.unix_timestamp;
+    let bump = get_proposal_bump(ctx.program_id, multisig.key(), proposal_index)?;
+
+    initialize_proposal(
+        &mut ctx.accounts.proposal,
+        multisig.key(),
+        proposal_index,
+        instruction.clone(),
+        ctx.accounts.proposer.key(),
+        &description,
+        bump,
+        current_time,
+        &multisig.signers,
+    )?;
+
+    emit_proposal_created(
+        multisig.key(),
+        ctx.accounts.proposal.key(),
+        ctx.accounts.proposer.key(),
+        instruction,
+        &description,
+        current_time,
+    )?;
+
     msg!(
         "Created proposal #{} in multisig {}",
         proposal_index,
         multisig.key()
     );
-    
+
+    Ok(())
+}
+
+// Ensures the proposal description is within the allowed length
+fn validate_description(description: &str) -> Result<()> {
+    require!(description.len() <= MAX_DESCRIPTION_LENGTH, SolLearningError::DescriptionTooLong);
+    Ok(())
+}
+
+// Increments the proposal count and checks for overflow
+fn increment_proposal_count(multisig: &mut Account<Multisig>) -> Result<u64> {
+    let proposal_index = multisig.proposal_count;
+    multisig.proposal_count = multisig
+        .proposal_count
+        .checked_add(1)
+        .ok_or(SolLearningError::Overflow)?;
+    Ok(proposal_index)
+}
+
+// Retrieves the bump for the proposal PDA
+fn get_proposal_bump(program_id: &Pubkey, multisig_key: Pubkey, proposal_index: u64) -> Result<u8> {
+    let (_, bump) = Pubkey::find_program_address(
+        &[
+            PROPOSAL_SEED,
+            multisig_key.as_ref(),
+            &proposal_index.to_le_bytes(),
+        ],
+        program_id,
+    );
+    Ok(bump)
+}
+
+// Initializes the proposal account
+fn initialize_proposal(
+    proposal: &mut Account<Proposal>,
+    multisig_key: Pubkey,
+    index: u64,
+    instruction: ProposalInstruction,
+    proposer_key: Pubkey,
+    description: &str,
+    bump: u8,
+    timestamp: i64,
+    signers: &[Pubkey],
+) -> Result<()> {
+    proposal.multisig = multisig_key;
+    proposal.index = index;
+    proposal.instruction = instruction;
+    proposal.status = ProposalStatus::Active;
+    proposal.created_at = timestamp;
+    proposal.closed_at = None;
+    proposal.description = description.to_string();
+    proposal.bump = bump;
+    proposal.signers = signers.iter().map(|&signer| signer == proposer_key).collect();
+    Ok(())
+}
+
+// Emits the event for proposal creation
+fn emit_proposal_created(
+    multisig_key: Pubkey,
+    proposal_key: Pubkey,
+    proposer_key: Pubkey,
+    instruction: ProposalInstruction,
+    description: &str,
+    timestamp: i64,
+) -> Result<()> {
+    emit!(ProposalCreated {
+        multisig: multisig_key,
+        proposal: proposal_key,
+        proposer: proposer_key,
+        instruction,
+        description: description.to_string(),
+        timestamp,
+    });
     Ok(())
 }

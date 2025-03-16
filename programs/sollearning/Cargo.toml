@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-anchor-lang = "=0.31.0"
+anchor-lang = {version="0.31.0",  features = ["derive"] }
 anchor-spl = { version = "=0.31.0", features = ["token", "associated_token", "metadata"] }
 spl-token = { version = "=7.0.0", features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "=6.0.0", features = ["no-entrypoint"] }
@@ -16,3 +16,6 @@ spl-associated-token-account = { version = "=6.0.0", features = ["no-entrypoint"
 default = ["no-entrypoint"]
 no-entrypoint = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(has_foo)'] }

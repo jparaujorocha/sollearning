@@ -1,43 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
-use anchor_spl::associated_token::AssociatedToken;
-use crate::states::program::ProgramState;
-use crate::constants::*;
-use crate::error::SolLearningError; 
-
-#[derive(Accounts)]
-pub struct CreateStudentTokenAccount<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    
-    #[account(
-        seeds = [PROGRAM_STATE_SEED],
-        bump = program_state.bump,
-        constraint = !program_state.paused @ SolLearningError::ProgramPaused,
-    )]
-    pub program_state: Account<'info, ProgramState>,
-    
-    /// CHECK: Used as authority for the new token account
-    #[account(
-        address = program_state.token_mint,
-    )]
-    pub token_mint: AccountInfo<'info>,
-    
-    /// CHECK: This is the student who will be the owner of the token account
-    pub student: UncheckedAccount<'info>,
-    
-    /// CHECK: This is the token account that will be created
-    #[account(mut)]
-    pub student_token_account: UncheckedAccount<'info>,
-    
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub rent: Sysvar<'info, Rent>,
-}
+use crate::instructions::structs::create_student_account_struct::CreateStudentTokenAccount;
 
 pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccount>) -> Result<()> {
-    // Create the associated token account
+    create_associated_token_account(&ctx)?;
+    log_token_creation(&ctx); 
+    Ok(())
+}
+
+fn create_associated_token_account(ctx: &Context<CreateStudentTokenAccount>) -> Result<()> {
     anchor_spl::associated_token::create(
         CpiContext::new(
             ctx.accounts.associated_token_program.to_account_info(),
@@ -51,7 +21,10 @@ pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccou
             },
         ),
     )?;
+    Ok(())
+}
 
+fn log_token_creation(ctx: &Context<CreateStudentTokenAccount>) {
     msg!(
         "Created token account for student: {}",
         ctx.accounts.student.key()
@@ -61,6 +34,4 @@ pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccou
         "Token account address: {}",
         ctx.accounts.student_token_account.key()
     );
-
-    Ok(())
 }

@@ -1,79 +1,87 @@
 use anchor_lang::prelude::*;
-use crate::state::{Multisig, MultisigCreated};
+use crate::states::signers::{Multisig, MultisigCreated};
 use crate::error::SolLearningError;
 use crate::constants::*;
-
-#[derive(Accounts)]
-#[instruction(signers: Vec<Pubkey>, threshold: u8)]
-pub struct CreateMultisig<'info> {
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + 4 + (signers.len() * 32) + 1 + 8 + 32 + 1,
-        seeds = [MULTISIG_SEED],
-        bump,
-    )]
-    pub multisig: Account<'info, Multisig>,
-    
-    pub system_program: Program<'info, System>,
-}
+use std::collections::HashSet;
+use crate::instructions::structs::create_multisig_struct::CreateMultisig;
 
 pub fn create_multisig_handler(
     ctx: Context<CreateMultisig>,
     signers: Vec<Pubkey>,
     threshold: u8,
 ) -> Result<()> {
-    // Validate multisig configuration
+    validate_multisig(&signers, threshold)?;
+    validate_unique_signers(&signers)?;
+    validate_authority(&signers, ctx.accounts.authority.key())?;
+
+    let bump = Pubkey::find_program_address(&[MULTISIG_SEED], ctx.program_id).1;
+
+    initialize_multisig(
+        &mut ctx.accounts.multisig,
+        &signers, 
+        threshold,
+        ctx.accounts.authority.key(),
+        bump,
+    )?;
+
+    emit_multisig_created(ctx.accounts.multisig.key(), &signers, threshold)?;
+
+    Ok(())
+}
+
+fn validate_multisig(signers: &[Pubkey], threshold: u8) -> Result<()> {
     require!(!signers.is_empty(), SolLearningError::InvalidMultisigConfig);
     require!(signers.len() <= MAX_SIGNERS, SolLearningError::MaxSignersReached);
     require!(
-        threshold > 0 && threshold as usize <= signers.len(),
+        threshold > 0 && (threshold as usize) <= signers.len(),
         SolLearningError::InvalidThreshold
     );
-    
-    // Check for duplicate signers
-    for (i, signer) in signers.iter().enumerate() {
-        for (j, other_signer) in signers.iter().enumerate() {
-            if i != j && signer == other_signer {
-                return Err(SolLearningError::SignerAlreadyExists.into());
-            }
-        }
+    Ok(())
+}
+
+fn validate_unique_signers(signers: &[Pubkey]) -> Result<()> {
+    let mut unique_signers = HashSet::new();
+    for signer in signers {
+        require!(unique_signers.insert(*signer), SolLearningError::SignerAlreadyExists);
     }
-    
-    // Ensure the authority is one of the signers
-    require!(
-        signers.contains(&ctx.accounts.authority.key()),
-        SolLearningError::Unauthorized
-    );
-    
-    // Get bump
-    let (_, bump) = Pubkey::find_program_address(&[MULTISIG_SEED], ctx.program_id);
-    
-    // Initialize multisig account
-    let multisig = &mut ctx.accounts.multisig;
-    multisig.signers = signers.clone();
+    Ok(())
+}
+
+fn validate_authority(signers: &[Pubkey], authority: Pubkey) -> Result<()> {
+    require!(signers.contains(&authority), SolLearningError::Unauthorized);
+    Ok(())
+}
+
+fn initialize_multisig(
+    multisig: &mut Account<Multisig>,
+    signers: &[Pubkey],
+    threshold: u8,
+    authority: Pubkey,
+    bump: u8,
+) -> Result<()> {
+    multisig.signers = signers.to_vec();
     multisig.threshold = threshold;
     multisig.proposal_count = 0;
-    multisig.authority = ctx.accounts.authority.key();
+    multisig.authority = authority;
     multisig.bump = bump;
-    
-    // Emit multisig creation event
-    let current_time = Clock::get()?.unix_timestamp;
+    Ok(())
+}
+
+fn emit_multisig_created(multisig_key: Pubkey, signers: &[Pubkey], threshold: u8) -> Result<()> {
+    let timestamp = Clock::get()?.unix_timestamp;
+
     emit!(MultisigCreated {
-        multisig: multisig.key(),
-        signers: signers.clone(),
+        multisig: multisig_key,
+        signers: signers.to_vec(),
         threshold,
-        timestamp: current_time,
+        timestamp,
     });
-    
+
     msg!(
-        "Created multisig with {} signers and threshold of {}",
+        "Multisig created with {} signers and threshold of {}",
         signers.len(),
         threshold
     );
-    
+
     Ok(())
 }
