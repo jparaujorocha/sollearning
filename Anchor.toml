@@ -3,7 +3,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-sollearning = "FpfRZaGL4sHYABnUxrr7U8956kH491RQTrHTwe9gGUAU"
+sollearning = "B1Yes6kHysrVXSxYyZovsTEJzRBGzieuQeLztaMkBgWy"
 
 [registry]
 url = "https://api.apr.dev"
