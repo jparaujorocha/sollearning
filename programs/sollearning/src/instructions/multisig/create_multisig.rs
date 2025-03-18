@@ -3,7 +3,7 @@ use crate::states::signers::{Multisig, MultisigCreated};
 use crate::error::SolLearningError;
 use crate::constants::*;
 use std::collections::HashSet;
-use crate::instructions::structs::create_multisig_struct::CreateMultisig;
+use crate::instructions::multisig::create_multisig_struct::CreateMultisig;
 
 pub fn create_multisig_handler(
     ctx: Context<CreateMultisig>,

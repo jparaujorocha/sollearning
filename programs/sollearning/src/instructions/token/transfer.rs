@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self};
 use crate::error::SolLearningError;
-use crate::instructions::structs::transfer_struct::TransferInstruction;
+use crate::instructions::token::transfer_struct::TransferInstruction;
 use crate::utils::pause::{check_program_running, check_function_running};
 use crate::constants::PAUSE_FLAG_TRANSFER;
 

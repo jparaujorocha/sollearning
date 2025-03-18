@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::states::educator::EducatorAccount;
 use crate::constants::*;
 use crate::error::SolLearningError;
-use crate::instructions::structs::register_educator_struct::RegisterEducator;
+use crate::instructions::educator::register_educator_struct::RegisterEducator;
 use crate::utils::pause::{check_program_running, check_function_running};
 
 pub fn register_educator_handler(ctx: Context<RegisterEducator>, mint_limit: u64) -> Result<()> {

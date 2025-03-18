@@ -3,7 +3,7 @@ use crate::states::signers::Multisig;
 use crate::states::proposal::{Proposal, ProposalStatus, ProposalApproved};
 use crate::error::SolLearningError;
 use crate::constants::*;
-use crate::instructions::structs::approve_proposal_struct::ApproveProposal;
+use crate::instructions::proposal::approve_proposal_struct::ApproveProposal;
 
 pub fn approve_proposal_handler(ctx: Context<ApproveProposal>) -> Result<()> {
     let proposal: &mut Account<'_, Proposal> = &mut ctx.accounts.proposal;

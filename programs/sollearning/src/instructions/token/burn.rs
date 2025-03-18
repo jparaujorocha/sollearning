@@ -3,7 +3,7 @@ use anchor_spl::token::{self};
 use crate::states::program::ProgramState;
 use crate::states::course::TokensBurned;
 use crate::error::SolLearningError;
-use crate::instructions::structs::burn_struct::BurnInstruction;
+use crate::instructions::token::burn_struct::BurnInstruction;
 use crate::utils::pause::{check_program_running, check_function_running};
 use crate::constants::PAUSE_FLAG_BURN;
 

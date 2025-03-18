@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::instructions::structs::create_student_account_struct::CreateStudentTokenAccount;
+use crate::instructions::student::create_student_account_struct::CreateStudentTokenAccount;
 
 pub fn create_student_token_account_handler(ctx: Context<CreateStudentTokenAccount>) -> Result<()> {
     create_associated_token_account(&ctx)?;

@@ -3,7 +3,7 @@ use crate::states::educator::EducatorAccount;
 use crate::states::course::{Course, CourseCreated};
 use crate::constants::*;
 use crate::error::SolLearningError;
-use crate::instructions::structs::create_course_struct::CreateCourse;
+use crate::instructions::course::create_course_struct::CreateCourse;
 use crate::utils::pause::{check_program_running, check_function_running};
 
 pub fn create_course_handler(

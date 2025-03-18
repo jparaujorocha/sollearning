@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::states::student::{StudentInfo, StudentRegistered};
-use crate::instructions::structs::register_student_struct::RegisterStudent;
+use crate::instructions::student::register_student_struct::RegisterStudent;
 
 
 pub fn register_student_handler(ctx: Context<RegisterStudent>) -> Result<()> {

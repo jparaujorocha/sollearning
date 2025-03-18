@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::states::config::ConfigUpdated;
 use crate::error::SolLearningError;
-use crate::instructions::structs::update_program_config_struct::UpdateProgramConfig;
+use crate::instructions::config::update_program_config_struct::UpdateProgramConfig;
 use crate::utils::pause::check_program_running;
 use crate::utils::config::check_authority;
 

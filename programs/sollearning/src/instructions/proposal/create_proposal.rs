@@ -3,7 +3,7 @@ use crate::states::signers::Multisig;
 use crate::states::proposal::{Proposal, ProposalStatus, ProposalInstruction, ProposalCreated};
 use crate::error::SolLearningError;
 use crate::constants::*;
-use crate::instructions::structs::create_proposal_struct::CreateProposal;
+use crate::instructions::proposal::create_proposal_struct::CreateProposal;
 
 pub fn create_proposal_handler(
     ctx: Context<CreateProposal>,

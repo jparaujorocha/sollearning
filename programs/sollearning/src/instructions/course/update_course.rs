@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::states::course::{Course, CourseHistory, CourseUpdated};
 use crate::constants::*;
 use crate::error::SolLearningError;
-use crate::instructions::structs::update_course_struct::UpdateCourse;
+use crate::instructions::course::update_course_struct::UpdateCourse;
 
 pub fn update_course_handler(
     ctx: Context<UpdateCourse>,

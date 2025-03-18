@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::states::config::ConfigUpdated;
-use crate::instructions::structs::create_program_config_struct::CreateProgramConfig;
+use crate::instructions::config::create_program_config_struct::CreateProgramConfig;
 
 pub fn create_program_config_handler(
     ctx: Context<CreateProgramConfig>,

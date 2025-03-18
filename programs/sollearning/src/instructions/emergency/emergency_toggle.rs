@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::states::program::{ProgramState, ProgramStatusChanged, ProgramGranularPauseChanged};
-use crate::instructions::structs::emergency_toggle_struct::{EmergencyToggle, EmergencyToggleGranular, EmergencyMultisigToggle};
+use crate::instructions::emergency::emergency_toggle_struct::{EmergencyToggle, EmergencyToggleGranular, EmergencyMultisigToggle};
 use crate::utils::pause::check_authority;
 use crate::constants::*;
 

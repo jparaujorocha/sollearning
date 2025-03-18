@@ -4,7 +4,7 @@ use crate::states::program::ProgramState;
 use crate::states::config::ProgramConfig;
 use crate::states::course::TokensMinted;
 use crate::constants::*;
-use crate::instructions::structs::initialize_struct::InitializeAccounts;
+use crate::instructions::initialize::initialize_struct::InitializeAccounts;
 
 pub fn initialize_handler(ctx: Context<InitializeAccounts>) -> Result<()> {
     let program_bump = ctx.bumps.program_state;

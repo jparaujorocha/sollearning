@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::states::proposal::{Proposal, ProposalStatus, ProposalExecuted};
 use crate::error::SolLearningError;
-use crate::instructions::structs::execute_proposal_struct::ExecuteProposal;
+use crate::instructions::proposal::execute_proposal_struct::ExecuteProposal;
 
 pub fn execute_proposal_handler(ctx: Context<ExecuteProposal>) -> Result<()> {
     validate_execution(&ctx)?;

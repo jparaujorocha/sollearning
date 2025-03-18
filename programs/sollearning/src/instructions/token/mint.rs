@@ -6,7 +6,7 @@ use crate::states::student::StudentInfo;
 use crate::states::course::{CourseCompletion, CourseCompleted, TokensMinted};
 use crate::error::SolLearningError;
 use crate::constants::*;
-use crate::instructions::structs::mint_struct::MintToStudent;
+use crate::instructions::token::mint_struct::MintToStudent;
 use crate::utils::pause::{check_program_running, check_function_running};
 
 pub fn mint_to_student_handler(ctx: Context<MintToStudent>, amount: u64, course_id: String) -> Result<()> {

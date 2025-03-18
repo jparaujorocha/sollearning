@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::states::educator::EducatorAccount;
 use crate::constants::*;
 use crate::error::SolLearningError;
-use crate::instructions::structs::set_educator_status_struct::SetEducatorStatus;
+use crate::instructions::educator::set_educator_status_struct::SetEducatorStatus;
 
 pub fn set_educator_status_handler(
     ctx: Context<SetEducatorStatus>,

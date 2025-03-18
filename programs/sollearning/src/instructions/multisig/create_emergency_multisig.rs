@@ -3,7 +3,7 @@ use crate::states::emergency::{EmergencyMultisig, EmergencyMultisigCreated};
 use crate::error::SolLearningError;
 use crate::constants::*;
 use std::collections::HashSet;
-use crate::instructions::structs::create_emergency_multisig_struct::CreateEmergencyMultisig;
+use crate::instructions::multisig::create_emergency_multisig_struct::CreateEmergencyMultisig;
 use crate::utils::pause::{check_program_running, check_authority};
 
 pub fn create_emergency_multisig_handler(
