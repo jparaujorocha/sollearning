@@ -60,7 +60,7 @@ use instructions::config::update_program_config_struct::__client_accounts_update
 use instructions::initialize::initialize_struct::__client_accounts_initialize_accounts;
 
 
-declare_id!("FpfRZaGL4sHYABnUxrr7U8956kH491RQTrHTwe9gGUAU");
+declare_id!("3zYMcbfRqRnam7pncxKdiJkeZ6V7yg9Ub3SfXSsCjA5p");
 
 #[program]
 pub mod sollearning {

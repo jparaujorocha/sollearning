@@ -3,13 +3,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-sollearning = "B1Yes6kHysrVXSxYyZovsTEJzRBGzieuQeLztaMkBgWy"
+sollearning = "3zYMcbfRqRnam7pncxKdiJkeZ6V7yg9Ub3SfXSsCjA5p"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
